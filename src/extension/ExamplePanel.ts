@@ -1,35 +1,33 @@
 import * as vscode from "vscode";
-import { RequestHandler } from './RequestHandler';
 
-export class RequestPanel {
-  public static currentPanels = new Map<string, RequestPanel>();
+export class ExamplePanel {
+  public static currentPanels = new Map<string, ExamplePanel>();
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
   private readonly _context: vscode.ExtensionContext;
   private _disposables: vscode.Disposable[] = [];
-  private readonly _requestId?: string;
+  private readonly _exampleId?: string;
 
-  public static createOrShow(context: vscode.ExtensionContext, request?: any) {
+  public static createOrShow(context: vscode.ExtensionContext, data?: any) {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
 
-    // If we have a request ID, check if we already have a panel for it
-    if (request && request.id) {
-        const existingPanel = RequestPanel.currentPanels.get(request.id);
+    // Handle data being either the example object or { example: ..., parentRequest: ... }
+    const example = data?.example || data;
+
+    // If we have an example ID, check if we already have a panel for it
+    if (example && example.id) {
+        const existingPanel = ExamplePanel.currentPanels.get(example.id);
         if (existingPanel) {
             existingPanel._panel.reveal(column);
-            existingPanel._panel.webview.postMessage({
-                type: 'updateRequest',
-                payload: request
-            });
             return;
         }
     }
 
     const panel = vscode.window.createWebviewPanel(
-      "apipilot-request",
-      request ? `${request.name}` : "New Request",
+      "apipilot-example",
+      example ? `${example.name}` : "Example",
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -40,35 +38,29 @@ export class RequestPanel {
       }
     );
 
-    const requestPanel = new RequestPanel(panel, context, request);
+    const examplePanel = new ExamplePanel(panel, context, data);
     
-    if (request && request.id) {
-        RequestPanel.currentPanels.set(request.id, requestPanel);
+    if (example && example.id) {
+        ExamplePanel.currentPanels.set(example.id, examplePanel);
     }
   }
 
-  private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, request?: any) {
+  private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, data?: any) {
     this._panel = panel;
     this._extensionUri = context.extensionUri;
     this._context = context;
-    this._requestId = request?.id;
+    
+    const example = data?.example || data;
+    this._exampleId = example?.id;
 
-    this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, request);
+    this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, data);
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
     this._panel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.type) {
-            case "executeRequest": {
-                const response = await RequestHandler.makeRequest(message.payload);
-                this._panel.webview.postMessage({
-                    type: 'executeResponse',
-                    payload: response
-                });
-                break;
-            }
-             case "onInfo": {
+            case "onInfo": {
                 if (!message.value) return;
                 vscode.window.showInformationMessage(message.value);
                 break;
@@ -79,8 +71,13 @@ export class RequestPanel {
                 break;
             }
             case "log": {
-                 console.log(`Log from RequestPanel: ${message.value}`);
+                 console.log(`Log from ExamplePanel: ${message.value}`);
                  break;
+            }
+            case "openRequest": {
+                // Forward openRequest to the main extension logic
+                vscode.commands.executeCommand('apipilot.openRequest', message.payload);
+                break;
             }
         }
       },
@@ -90,8 +87,8 @@ export class RequestPanel {
   }
 
   public dispose() {
-    if (this._requestId) {
-        RequestPanel.currentPanels.delete(this._requestId);
+    if (this._exampleId) {
+        ExamplePanel.currentPanels.delete(this._exampleId);
     }
     this._panel.dispose();
     while (this._disposables.length) {
@@ -137,9 +134,9 @@ export class RequestPanel {
 				<meta http-equiv="Content-Security-Policy" content="${csp}">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 				${!isDev ? `<link href="${styleResetUri}" rel="stylesheet">` : ''}
-				<title>ApiPilot Request</title>
+				<title>ApiPilot Example</title>
                 <script nonce="${nonce}">
-                    window.viewType = 'editor';
+                    window.viewType = 'example-editor';
                     ${initialDataScript}
                 </script>
                  <script nonce="${nonce}">

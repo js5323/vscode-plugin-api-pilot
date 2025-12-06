@@ -10,6 +10,7 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 import { useState } from 'react';
 import { METHOD_COLORS } from '../../constants';
 import { ApiRequest } from '../../types';
+import ExampleItem from './ExampleItem';
 
 interface RequestItemProps {
     request: ApiRequest;
@@ -19,9 +20,13 @@ interface RequestItemProps {
     onDuplicate?: (id: string) => void;
     onShare?: (id: string) => void;
     onAddExample?: (id: string) => void;
+    onOpenExample?: (example: any, parentRequest: ApiRequest) => void;
+    onDeleteExample?: (exampleId: string, requestId: string) => void;
+    onRenameExample?: (exampleId: string, requestId: string, newName: string) => void;
+    onDuplicateExample?: (exampleId: string, requestId: string) => void;
 }
 
-export default function RequestItem({ request, onClick, onDelete, onRename, onDuplicate, onShare, onAddExample }: RequestItemProps) {
+export default function RequestItem({ request, onClick, onDelete, onRename, onDuplicate, onShare, onAddExample, onOpenExample, onDeleteExample, onRenameExample, onDuplicateExample }: RequestItemProps) {
     const [hover, setHover] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [renameDialogOpen, setRenameDialogOpen] = useState(false);
@@ -129,14 +134,14 @@ export default function RequestItem({ request, onClick, onDelete, onRename, onDu
                         )}
                         
                         <Chip 
-                            label={request.method} 
+                            label={request.method.charAt(0).toUpperCase()} 
                             size="small" 
                             color={METHOD_COLORS[request.method as keyof typeof METHOD_COLORS] || 'default'} 
-                            sx={{ mr: 1, height: 16, fontSize: '0.6rem', fontWeight: 'bold', minWidth: 35 }} 
+                            sx={{ mr: 1, height: 14, fontSize: '10px', fontWeight: 'bold', minWidth: 15 }} 
                         />
                         <ListItemText 
                             primary={request.name} 
-                            primaryTypographyProps={{ noWrap: true, variant: 'body2', fontSize: '0.75rem' }}
+                            primaryTypographyProps={{ noWrap: true, variant: 'body2', fontSize: '12px' }}
                         />
                     </Box>
                 </ListItemButton>
@@ -146,38 +151,66 @@ export default function RequestItem({ request, onClick, onDelete, onRename, onDu
                     open={menuOpen}
                     onClose={() => handleMenuClose()}
                     onClick={(e) => e.stopPropagation()}
-                    PaperProps={{
-                        elevation: 3,
-                        sx: { minWidth: 180 }
+                    slotProps={{
+                        paper: {
+                            elevation: 3,
+                            sx: { 
+                                minWidth: 140,
+                                padding: '4px 0',
+                                '& .MuiMenuItem-root': {
+                                    fontSize: '0.75rem',
+                                    padding: '6px 16px',
+                                    minHeight: 'auto'
+                                }
+                            }
+                        },
                     }}
                 >
                     <MenuItem onClick={handleAddExample}>
-                        <ListItemIcon><CodeIcon fontSize="small" /></ListItemIcon>
-                        <ListItemText>Add example</ListItemText>
+                        <ListItemIcon sx={{ minWidth: 30 }}><CodeIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                        <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Add example</ListItemText>
                     </MenuItem>
-                    <Divider />
+                    <Divider sx={{ my: 0.5 }} />
                     <MenuItem onClick={handleShare}>
-                        <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
-                        <ListItemText>Share</ListItemText>
+                        <ListItemIcon sx={{ minWidth: 30 }}><ShareIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                        <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Share</ListItemText>
                     </MenuItem>
-                    <Divider />
-                     <MenuItem onClick={handleRenameOpen}>
-                        <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-                        <ListItemText>Rename</ListItemText>
+                    <Divider sx={{ my: 0.5 }} />
+                    <MenuItem onClick={handleRenameOpen}>
+                        <ListItemIcon sx={{ minWidth: 30 }}><EditIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                        <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Rename</ListItemText>
                     </MenuItem>
                     <MenuItem onClick={handleDuplicate}>
-                        <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
-                        <ListItemText>Duplicate</ListItemText>
+                        <ListItemIcon sx={{ minWidth: 30 }}><ContentCopyIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                        <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Duplicate</ListItemText>
                     </MenuItem>
                     <MenuItem onClick={(e) => {
                         if (onDelete) onDelete(request.id);
                         handleMenuClose(e);
                     }}>
-                        <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-                        <ListItemText sx={{ color: 'error.main' }}>Delete</ListItemText>
+                        <ListItemIcon sx={{ minWidth: 30 }}><DeleteIcon fontSize="small" color="error" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                        <ListItemText sx={{ color: 'error.main' }} primaryTypographyProps={{ fontSize: '0.75rem' }}>Delete</ListItemText>
                     </MenuItem>
                 </Menu>
             </ListItem>
+            
+            {hasExamples && (
+                <Collapse in={expanded} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding>
+                        {request.examples!.map((example) => (
+                             <ExampleItem
+                                key={example.id}
+                                example={example}
+                                parentRequest={request}
+                                onClick={() => onOpenExample && onOpenExample(example, request)}
+                                onDelete={onDeleteExample}
+                                onRename={onRenameExample}
+                                onDuplicate={onDuplicateExample}
+                            />
+                        ))}
+                    </List>
+                </Collapse>
+            )}
 
             <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)} onClick={(e) => e.stopPropagation()}>
                 <DialogTitle>Rename Request</DialogTitle>
@@ -204,20 +237,6 @@ export default function RequestItem({ request, onClick, onDelete, onRename, onDu
                     <Button onClick={handleRenameSubmit}>Save</Button>
                 </DialogActions>
             </Dialog>
-
-            <Collapse in={expanded} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                    {request.examples?.map((example: any) => (
-                        <ListItemButton key={example.id} sx={{ pl: 8, py: 0.5 }}>
-                             <ListItemText 
-                                primary={example.name} 
-                                primaryTypographyProps={{ variant: 'body2', fontSize: '0.7rem', color: 'text.secondary' }} 
-                             />
-                             <Chip label={example.status || 200} size="small" variant="outlined" sx={{ height: 16, fontSize: '0.6rem', ml: 1 }} />
-                        </ListItemButton>
-                    ))}
-                </List>
-            </Collapse>
         </>
     );
 }

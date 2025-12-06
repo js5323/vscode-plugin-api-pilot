@@ -1,214 +1,168 @@
 import { useState, useEffect } from 'react';
-import { 
-  Box, 
-  TextField, 
-  Select, 
-  MenuItem, 
-  Button, 
-  Tabs, 
-  Tab, 
-  Typography,
-  Paper,
-  CircularProgress,
-  Grid
-} from '@mui/material';
+import { Box, Typography, Paper, Tabs, Tab, TextField, Button, Stack, Select, MenuItem, InputLabel, FormControl, Divider, Chip } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import CurlImportDialog from '../components/CurlImportDialog';
+import SaveIcon from '@mui/icons-material/Save';
 import { getVsCodeApi } from '../utils/vscode';
+import { ApiRequest } from '../types';
 
-// Acquire the VS Code API
 const vscode = getVsCodeApi();
 
-// Placeholder for method selection
-const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
 
-export default function RequestEditor() {
-  const [method, setMethod] = useState('GET');
-  const [url, setUrl] = useState('');
-  const [activeTab, setActiveTab] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState<any>(null);
-  const [importOpen, setImportOpen] = useState(false);
-
-  useEffect(() => {
-      // Check for initial data injected by the extension
-      const initialData = (window as any).initialData;
-      if (initialData) {
-          console.log('Initial Data:', initialData);
-          setMethod(initialData.method || 'GET');
-          setUrl(initialData.url || '');
-      }
-
-      const handleMessage = (event: any) => {
-          const message = event.data;
-          if (message.type === 'executeResponse') {
-              setResponse(message.payload);
-              setLoading(false);
-          } else if (message.type === 'parseCurlSuccess') {
-              const data = message.payload;
-              setMethod(data.method.toUpperCase());
-              setUrl(data.url);
-              // TODO: Set headers and body
-              console.log('Imported cURL:', data);
-          }
-      };
-
-      window.addEventListener('message', handleMessage);
-      return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  const handleSendRequest = () => {
-    if (!url) {
-        // Basic validation
-        return; 
-    }
-    setLoading(true);
-    setResponse(null);
-    
-    vscode.postMessage({
-        type: 'executeRequest',
-        payload: {
-            method,
-            url,
-            // TODO: Add params, headers, body
-        }
-    });
-  };
-
-  const handleExport = () => {
-      let cmd = `curl -X ${method} "${url}"`;
-      // TODO: Add headers and body
-      
-      navigator.clipboard.writeText(cmd).then(() => {
-          vscode.postMessage({ type: 'onInfo', value: 'cURL copied to clipboard!' });
-      });
-  };
+function CustomTabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', p: 2 }}>
-      <CurlImportDialog 
-        open={importOpen} 
-        onClose={() => setImportOpen(false)} 
-      />
-      {/* Header / Request Bar */}
-      <Paper sx={{ p: 2, mb: 2 }} elevation={2}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12 }} sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button 
-                startIcon={<CloudUploadIcon />} 
-                size="small" 
-                onClick={() => setImportOpen(true)}
-              >
-                  Import cURL
-              </Button>
-              <Button 
-                startIcon={<ContentCopyIcon />} 
-                size="small" 
-                onClick={handleExport}
-              >
-                  Export cURL
-              </Button>
-          </Grid>
-          <Grid size={{ xs: 3, sm: 2 }}>
-             <Select
-                fullWidth
-                value={method}
-                onChange={(e) => setMethod(e.target.value)}
-                size="small"
-              >
-                {HTTP_METHODS.map((m) => (
-                  <MenuItem key={m} value={m}>{m}</MenuItem>
-                ))}
-              </Select>
-          </Grid>
-          <Grid size={{ xs: 7, sm: 8 }}>
-            <TextField 
-              fullWidth 
-              placeholder="Enter URL" 
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              size="small"
-            />
-          </Grid>
-          <Grid size={{ xs: 2, sm: 2 }}>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              fullWidth
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-              onClick={handleSendRequest}
-              disabled={loading}
-            >
-              {loading ? 'Sending...' : 'Send'}
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Main Content Area: Request Config & Response */}
-      <Grid container spacing={2} sx={{ flexGrow: 1, overflow: 'hidden' }}>
-        {/* Left Panel: Request Configuration */}
-        <Grid size={{ xs: 12, md: 6 }} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Paper sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tab label="Params" />
-              <Tab label="Headers" />
-              <Tab label="Body" />
-              <Tab label="Auth" />
-            </Tabs>
-            <Box sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
-              {activeTab === 0 && <Typography>Query Params Config (Coming Soon)</Typography>}
-              {activeTab === 1 && <Typography>Headers Config (Coming Soon)</Typography>}
-              {activeTab === 2 && <Typography>Body Config (Coming Soon)</Typography>}
-              {activeTab === 3 && <Typography>Auth Config (Coming Soon)</Typography>}
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Right Panel: Response Viewer */}
-        <Grid size={{ xs: 12, md: 6 }} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-           <Paper sx={{ flexGrow: 1, p: 2, overflow: 'auto' }}>
-              <Typography variant="h6" gutterBottom>Response</Typography>
-              {response ? (
-                  <>
-                    <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
-                        <Typography variant="caption" color={response.status >= 400 ? 'error' : 'success.main'}>
-                            Status: {response.status} {response.statusText}
-                        </Typography>
-                        <Typography variant="caption">Time: {response.duration} ms</Typography>
-                        <Typography variant="caption">Size: {(response.size / 1024).toFixed(2)} KB</Typography>
-                    </Box>
-                    <Box sx={{ 
-                        border: '1px solid #333', 
-                        borderRadius: 1, 
-                        p: 1, 
-                        flexGrow: 1,
-                        backgroundColor: '#1e1e1e',
-                        fontFamily: 'monospace',
-                        whiteSpace: 'pre-wrap',
-                        overflow: 'auto',
-                        maxHeight: 'calc(100vh - 250px)'
-                    }}>
-                        {JSON.stringify(response.data, null, 2)}
-                    </Box>
-                  </>
-              ) : (
-                <Box sx={{ 
-                    border: '1px solid #333', 
-                    borderRadius: 1, 
-                    p: 1, 
-                    minHeight: '200px',
-                    backgroundColor: '#1e1e1e',
-                    fontFamily: 'monospace'
-                }}>
-                    <Typography color="text.secondary">Hit Send to see response...</Typography>
-                </Box>
-              )}
-           </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+      style={{ height: '100%' }}
+    >
+      {value === index && (
+        <Box sx={{ p: 2, height: '100%', boxSizing: 'border-box' }}>
+          {children}
+        </Box>
+      )}
+    </div>
   );
+}
+
+export default function RequestEditor() {
+    const initialData = (window as any).initialData as ApiRequest;
+    const [request, setRequest] = useState<ApiRequest>(initialData || {
+        id: '',
+        name: 'New Request',
+        method: 'GET',
+        url: '',
+        type: 'request'
+    });
+    const [tabValue, setTabValue] = useState(0);
+    const [response, setResponse] = useState<any>(null);
+
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.type === 'executeResponse') {
+                setResponse(message.payload);
+            } else if (message.type === 'updateRequest') {
+                setRequest(message.payload);
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
+    const handleSend = () => {
+        setResponse(null);
+        vscode.postMessage({ type: 'executeRequest', payload: request });
+    };
+
+    const handleChange = (field: keyof ApiRequest, value: any) => {
+        setRequest(prev => ({ ...prev, [field]: value }));
+    };
+
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+            {/* Header / URL Bar */}
+            <Paper square sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                    <Select
+                        value={request.method}
+                        onChange={(e) => handleChange('method', e.target.value)}
+                        displayEmpty
+                    >
+                        {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map(method => (
+                            <MenuItem key={method} value={method}>{method}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="Enter request URL" 
+                    value={request.url} 
+                    onChange={(e) => handleChange('url', e.target.value)}
+                />
+                <Button 
+                    variant="contained" 
+                    startIcon={<PlayArrowIcon />} 
+                    onClick={handleSend}
+                    disableElevation
+                >
+                    Send
+                </Button>
+                <Button 
+                    variant="outlined" 
+                    startIcon={<SaveIcon />}
+                >
+                    Save
+                </Button>
+            </Paper>
+
+            {/* Main Content Area */}
+            <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
+                {/* Left: Request Config */}
+                <Box sx={{ width: '50%', borderRight: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
+                            <Tab label="Params" />
+                            <Tab label="Headers" />
+                            <Tab label="Body" />
+                            <Tab label="Auth" />
+                        </Tabs>
+                    </Box>
+                    <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                        <CustomTabPanel value={tabValue} index={0}>
+                            <Typography color="text.secondary">Query Params (Coming Soon)</Typography>
+                        </CustomTabPanel>
+                        <CustomTabPanel value={tabValue} index={1}>
+                            <Typography color="text.secondary">Headers (Coming Soon)</Typography>
+                        </CustomTabPanel>
+                        <CustomTabPanel value={tabValue} index={2}>
+                             <TextField
+                                multiline
+                                fullWidth
+                                minRows={10}
+                                placeholder="{}"
+                                value={request.body || ''}
+                                onChange={(e) => handleChange('body', e.target.value)}
+                                sx={{ fontFamily: 'monospace' }}
+                            />
+                        </CustomTabPanel>
+                        <CustomTabPanel value={tabValue} index={3}>
+                            <Typography color="text.secondary">Authorization (Coming Soon)</Typography>
+                        </CustomTabPanel>
+                    </Box>
+                </Box>
+
+                {/* Right: Response */}
+                <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', p: 2, bgcolor: 'grey.50' }}>
+                    <Typography variant="subtitle2" gutterBottom>Response</Typography>
+                    {response ? (
+                         <Paper variant="outlined" sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
+                            <Stack direction="row" spacing={2} mb={1}>
+                                <Chip label={`Status: ${response.status || 'Unknown'}`} size="small" color="primary" />
+                                <Typography variant="caption" color="text.secondary">Time: {response.time || '0'}ms</Typography>
+                            </Stack>
+                            <Divider sx={{ my: 1 }} />
+                            <pre style={{ margin: 0, fontSize: '0.85rem' }}>
+                                {JSON.stringify(response.data || response, null, 2)}
+                            </pre>
+                        </Paper>
+                    ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexGrow: 1, color: 'text.secondary' }}>
+                            Enter URL and click Send
+                        </Box>
+                    )}
+                </Box>
+            </Box>
+        </Box>
+    );
 }

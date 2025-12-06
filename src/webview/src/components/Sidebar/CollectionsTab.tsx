@@ -11,8 +11,46 @@ const vscode = getVsCodeApi();
 export default function CollectionsTab() {
     const [searchTerm, setSearchTerm] = useState('');
     const [collections, setCollections] = useState<CollectionItem[]>([]);
+    const [filteredCollections, setFilteredCollections] = useState<CollectionItem[]>([]);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const [exampleToDelete, setExampleToDelete] = useState<{ exampleId: string, requestId: string } | null>(null);
+
+    useEffect(() => {
+        if (searchTerm.trim() === '') {
+            setFilteredCollections(collections);
+            return;
+        }
+        const filterItems = (items: CollectionItem[]): CollectionItem[] => {
+            return items.filter(item => {
+                // Check current item
+                let match = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+                
+                // For requests, also search URL and method
+                if (!match && item.type === 'request') {
+                    const req = item as ApiRequest;
+                    if (req.url.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        req.method.toLowerCase().includes(searchTerm.toLowerCase())) {
+                        match = true;
+                    }
+                }
+
+                if (match) {
+                    return true;
+                }
+
+                // If folder, check children
+                if (item.type === 'folder') {
+                    const filteredChildren = filterItems((item as CollectionFolder).children);
+                    if (filteredChildren.length > 0) {
+                        return { ...item, children: filteredChildren } as CollectionFolder;
+                    }
+                }
+                return false;
+            });
+        };
+        setFilteredCollections(filterItems(collections));
+    }, [searchTerm, collections]);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -187,32 +225,97 @@ export default function CollectionsTab() {
         saveCollections(addExampleInTree(collections));
     };
 
+    const handleRenameExample = (exampleId: string, requestId: string, newName: string) => {
+        const updateExampleInTree = (items: CollectionItem[]): CollectionItem[] => {
+            return items.map(item => {
+                if (item.id === requestId && item.type === 'request') {
+                     const request = item as ApiRequest;
+                     const newExamples = request.examples?.map(ex => 
+                        ex.id === exampleId ? { ...ex, name: newName } : ex
+                     );
+                     return { ...request, examples: newExamples };
+                }
+                if (item.type === 'folder') {
+                    return { ...item, children: updateExampleInTree(item.children) } as CollectionFolder;
+                }
+                return item;
+            });
+        };
+        saveCollections(updateExampleInTree(collections));
+    };
+
+    const handleDuplicateExample = (exampleId: string, requestId: string) => {
+        const updateExampleInTree = (items: CollectionItem[]): CollectionItem[] => {
+            return items.map(item => {
+                if (item.id === requestId && item.type === 'request') {
+                     const request = item as ApiRequest;
+                     const example = request.examples?.find(ex => ex.id === exampleId);
+                     if (example) {
+                         const newExample = {
+                             ...example,
+                             id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                             name: example.name + ' Copy'
+                         };
+                         return { ...request, examples: [...(request.examples || []), newExample] };
+                     }
+                }
+                if (item.type === 'folder') {
+                    return { ...item, children: updateExampleInTree(item.children) } as CollectionFolder;
+                }
+                return item;
+            });
+        };
+        saveCollections(updateExampleInTree(collections));
+    };
+
+    const handleDeleteExampleClick = (exampleId: string, requestId: string) => {
+        setExampleToDelete({ exampleId, requestId });
+        setDeleteDialogOpen(true);
+    };
+
     const handleDeleteClick = (id: string) => {
         setItemToDelete(id);
         setDeleteDialogOpen(true);
     };
 
     const handleDeleteConfirm = () => {
-        if (!itemToDelete) return;
-
-        const deleteFromTree = (items: CollectionItem[]): CollectionItem[] => {
-            return items.filter(item => item.id !== itemToDelete).map(item => {
-                if (item.type === 'folder') {
-                    return { ...item, children: deleteFromTree(item.children) } as CollectionFolder;
-                }
-                return item;
-            });
-        };
-        const newCollections = deleteFromTree(collections);
-        saveCollections(newCollections);
+        if (exampleToDelete) {
+            const deleteExampleInTree = (items: CollectionItem[]): CollectionItem[] => {
+                return items.map(item => {
+                    if (item.id === exampleToDelete.requestId && item.type === 'request') {
+                         const request = item as ApiRequest;
+                         const newExamples = request.examples?.filter(ex => ex.id !== exampleToDelete.exampleId);
+                         return { ...request, examples: newExamples };
+                    }
+                    if (item.type === 'folder') {
+                        return { ...item, children: deleteExampleInTree(item.children) } as CollectionFolder;
+                    }
+                    return item;
+                });
+            };
+            saveCollections(deleteExampleInTree(collections));
+            setExampleToDelete(null);
+        } else if (itemToDelete) {
+            const deleteFromTree = (items: CollectionItem[]): CollectionItem[] => {
+                return items.filter(item => item.id !== itemToDelete).map(item => {
+                    if (item.type === 'folder') {
+                        return { ...item, children: deleteFromTree(item.children) } as CollectionFolder;
+                    }
+                    return item;
+                });
+            };
+            const newCollections = deleteFromTree(collections);
+            saveCollections(newCollections);
+            setItemToDelete(null);
+        }
         
         setDeleteDialogOpen(false);
-        setItemToDelete(null);
     };
 
     const handleDeleteCancel = () => {
         setDeleteDialogOpen(false);
         setItemToDelete(null);
+        setExampleToDelete(null);
     };
 
     return (
@@ -243,7 +346,7 @@ export default function CollectionsTab() {
                     </Stack>
                 ) : (
                     <List dense>
-                        {collections.map((item) => (
+                        {filteredCollections.map((item) => (
                             item.type === 'folder' ? (
                                 <FolderItem 
                                     key={item.id} 
@@ -256,6 +359,11 @@ export default function CollectionsTab() {
                                     onRun={handleRunItem}
                                     onShare={handleShareItem}
                                     onAddExample={handleAddExampleItem}
+                                    onOpenRequest={(req) => vscode.postMessage({ type: 'openRequest', payload: req })}
+                                    onOpenExample={(ex, req) => vscode.postMessage({ type: 'openExample', payload: { example: ex, parentRequest: req } })}
+                                    onDeleteExample={handleDeleteExampleClick}
+                                    onRenameExample={handleRenameExample}
+                                    onDuplicateExample={handleDuplicateExample}
                                 />
                             ) : (
                                 <RequestItem 
@@ -267,6 +375,10 @@ export default function CollectionsTab() {
                                     onDuplicate={handleDuplicateItem}
                                     onAddExample={handleAddExampleItem}
                                     onShare={handleShareItem}
+                                    onOpenExample={(ex, req) => vscode.postMessage({ type: 'openExample', payload: { example: ex, parentRequest: req } })}
+                                    onDeleteExample={handleDeleteExampleClick}
+                                    onRenameExample={handleRenameExample}
+                                    onDuplicateExample={handleDuplicateExample}
                                 />
                             )
                         ))}

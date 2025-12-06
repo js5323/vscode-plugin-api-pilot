@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { RequestHandler } from './RequestHandler';
 import { RequestPanel } from './RequestPanel';
+import { ExamplePanel } from './ExamplePanel';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   _view?: vscode.WebviewView;
@@ -95,7 +96,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             break;
         }
         case "openRequest": {
-            RequestPanel.createOrShow(this._extensionUri, data.payload);
+            RequestPanel.createOrShow(this._context, data.payload);
+            break;
+        }
+        case "openExample": {
+            ExamplePanel.createOrShow(this._context, data.payload);
             break;
         }
         case "log": {

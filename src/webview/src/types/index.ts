@@ -11,7 +11,14 @@ export interface ApiRequest {
     auth?: any;
     type: 'request';
     parentId?: string; // ID of parent folder or collection, or undefined if root
-    examples?: any[];
+    examples?: ApiExample[];
+}
+
+export interface ApiExample {
+    id: string;
+    name: string;
+    status: number;
+    body: string;
 }
 
 export interface CollectionFolder {
