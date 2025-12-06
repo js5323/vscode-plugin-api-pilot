@@ -25,6 +25,12 @@ export function activate(context: vscode.ExtensionContext) {
             RequestPanel.createOrShow(context);
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('apipilot.refreshSidebar', () => {
+            sidebarProvider.refresh();
+        })
+    );
 }
 
 export function deactivate() {}

@@ -1,13 +1,33 @@
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 
+export interface KeyValueItem {
+    id: string;
+    key: string;
+    value: string;
+    description?: string;
+    isEnabled: boolean;
+}
+
+export interface ApiRequestBody {
+    type: 'none' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary' | 'graphql';
+    raw?: string;
+    formData?: KeyValueItem[];
+    urlencoded?: KeyValueItem[];
+    binary?: string;
+    graphql?: {
+        query: string;
+        variables: string;
+    };
+}
+
 export interface ApiRequest {
     id: string;
     name: string;
     method: RequestMethod;
     url: string;
-    headers?: Record<string, string>;
-    body?: any;
-    params?: Record<string, string>;
+    headers?: KeyValueItem[];
+    body?: ApiRequestBody;
+    queryParams?: KeyValueItem[];
     auth?: any;
     type: 'request';
     parentId?: string; // ID of parent folder or collection, or undefined if root
@@ -34,7 +54,7 @@ export type CollectionItem = CollectionFolder | ApiRequest;
 export interface Environment {
     id: string;
     name: string;
-    variables: Record<string, string>;
+    variables: KeyValueItem[];
     isActive: boolean;
 }
 

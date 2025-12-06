@@ -1,35 +1,34 @@
 import * as vscode from "vscode";
-import { RequestHandler } from './RequestHandler';
 
-export class RequestPanel {
-  public static currentPanels = new Map<string, RequestPanel>();
+export class EnvironmentPanel {
+  public static currentPanels = new Map<string, EnvironmentPanel>();
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
   private readonly _context: vscode.ExtensionContext;
   private _disposables: vscode.Disposable[] = [];
-  private readonly _requestId?: string;
+  private readonly _environmentId?: string;
 
-  public static createOrShow(context: vscode.ExtensionContext, request?: any) {
+  public static createOrShow(context: vscode.ExtensionContext, environment?: any) {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
 
-    // If we have a request ID, check if we already have a panel for it
-    if (request && request.id) {
-        const existingPanel = RequestPanel.currentPanels.get(request.id);
+    // If we have an environment ID, check if we already have a panel for it
+    if (environment && environment.id) {
+        const existingPanel = EnvironmentPanel.currentPanels.get(environment.id);
         if (existingPanel) {
             existingPanel._panel.reveal(column);
             existingPanel._panel.webview.postMessage({
-                type: 'updateRequest',
-                payload: request
+                type: 'updateEnvironment',
+                payload: environment
             });
             return;
         }
     }
 
     const panel = vscode.window.createWebviewPanel(
-      "apipilot-request",
-      request ? `${request.name}` : "New Request",
+      "apipilot-environment",
+      environment ? `${environment.name}` : "New Environment",
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -40,39 +39,27 @@ export class RequestPanel {
       }
     );
 
-    const requestPanel = new RequestPanel(panel, context, request);
+    const environmentPanel = new EnvironmentPanel(panel, context, environment);
     
-    if (request && request.id) {
-        RequestPanel.currentPanels.set(request.id, requestPanel);
+    if (environment && environment.id) {
+        EnvironmentPanel.currentPanels.set(environment.id, environmentPanel);
     }
   }
 
-  private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, request?: any) {
+  private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, environment?: any) {
     this._panel = panel;
     this._extensionUri = context.extensionUri;
     this._context = context;
-    this._requestId = request?.id;
+    this._environmentId = environment?.id;
 
-    this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, request);
+    this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, environment);
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
     this._panel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.type) {
-            case "executeRequest": {
-                const environments = this._context.globalState.get<any[]>('apipilot.environments', []);
-                const activeEnv = environments.find(e => e.isActive);
-                const variables = activeEnv ? activeEnv.variables : [];
-
-                const response = await RequestHandler.makeRequest(message.payload, variables);
-                this._panel.webview.postMessage({
-                    type: 'executeResponse',
-                    payload: response
-                });
-                break;
-            }
-             case "onInfo": {
+            case "onInfo": {
                 if (!message.value) return;
                 vscode.window.showInformationMessage(message.value);
                 break;
@@ -83,34 +70,23 @@ export class RequestPanel {
                 break;
             }
             case "log": {
-                 console.log(`Log from RequestPanel: ${message.value}`);
+                 console.log(`Log from EnvironmentPanel: ${message.value}`);
                  break;
             }
-            case "saveRequest": {
-                const updatedRequest = message.payload;
-                const collections = this._context.globalState.get<any[]>('apipilot.collections', []);
+            case "saveEnvironment": {
+                const updatedEnv = message.payload;
+                const environments = this._context.globalState.get<any[]>('apipilot.environments', []);
                 
-                const updateInTree = (items: any[]): boolean => {
-                    for (let i = 0; i < items.length; i++) {
-                        if (items[i].id === updatedRequest.id) {
-                            items[i] = updatedRequest;
-                            return true;
-                        }
-                        if (items[i].children) {
-                            if (updateInTree(items[i].children)) return true;
-                        }
-                    }
-                    return false;
-                };
-    
-                const found = updateInTree(collections);
-                if (found) {
-                    await this._context.globalState.update('apipilot.collections', collections);
-                    vscode.commands.executeCommand('apipilot.refreshSidebar');
-                    this._panel.webview.postMessage({ type: 'onInfo', value: 'Request saved' });
+                const index = environments.findIndex(e => e.id === updatedEnv.id);
+                if (index !== -1) {
+                    environments[index] = updatedEnv;
                 } else {
-                     this._panel.webview.postMessage({ type: 'onError', value: 'Could not find request to save' });
+                    environments.push(updatedEnv);
                 }
+
+                await this._context.globalState.update('apipilot.environments', environments);
+                vscode.commands.executeCommand('apipilot.refreshSidebar');
+                this._panel.webview.postMessage({ type: 'onInfo', value: 'Environment saved' });
                 break;
             }
         }
@@ -121,8 +97,8 @@ export class RequestPanel {
   }
 
   public dispose() {
-    if (this._requestId) {
-        RequestPanel.currentPanels.delete(this._requestId);
+    if (this._environmentId) {
+        EnvironmentPanel.currentPanels.delete(this._environmentId);
     }
     this._panel.dispose();
     while (this._disposables.length) {
@@ -168,9 +144,9 @@ export class RequestPanel {
 				<meta http-equiv="Content-Security-Policy" content="${csp}">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 				${!isDev ? `<link href="${styleResetUri}" rel="stylesheet">` : ''}
-				<title>ApiPilot Request</title>
+				<title>ApiPilot Environment</title>
                 <script nonce="${nonce}">
-                    window.viewType = 'editor';
+                    window.viewType = 'environment-editor';
                     ${initialDataScript}
                 </script>
                  <script nonce="${nonce}">

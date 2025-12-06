@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { RequestHandler } from './RequestHandler';
 import { RequestPanel } from './RequestPanel';
 import { ExamplePanel } from './ExamplePanel';
+import { EnvironmentPanel } from './EnvironmentPanel';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   _view?: vscode.WebviewView;
@@ -103,6 +104,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             ExamplePanel.createOrShow(this._context, data.payload);
             break;
         }
+        case "openEnvironmentEditor": {
+            EnvironmentPanel.createOrShow(this._context, data.payload);
+            break;
+        }
         case "log": {
             this._outputChannel.appendLine(`Log from Webview: ${data.value}`);
             break;
@@ -119,12 +124,40 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             await this._context.globalState.update('apipilot.collections', data.payload);
             break;
         }
+        case "getEnvironments": {
+            const envs = this._context.globalState.get('apipilot.environments', []);
+            webviewView.webview.postMessage({
+                type: 'updateEnvironments',
+                payload: envs
+            });
+            break;
+        }
+        case "saveEnvironments": {
+            await this._context.globalState.update('apipilot.environments', data.payload);
+            break;
+        }
       }
     });
   }
 
   public revive(panel: vscode.WebviewView) {
     this._view = panel;
+  }
+
+  public refresh() {
+    if (this._view) {
+        const collections = this._context.globalState.get('apipilot.collections', []);
+        this._view.webview.postMessage({
+            type: 'updateCollections',
+            payload: collections
+        });
+
+        const environments = this._context.globalState.get('apipilot.environments', []);
+        this._view.webview.postMessage({
+            type: 'updateEnvironments',
+            payload: environments
+        });
+    }
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {

@@ -73,17 +73,6 @@ export default function CollectionsTab() {
         vscode.postMessage({ type: 'saveCollections', payload: newCollections });
     };
 
-    const handleCreateRequest = () => {
-        const newRequest: ApiRequest = {
-            id: Date.now().toString(),
-            name: 'New Request',
-            method: 'GET',
-            url: '',
-            type: 'request'
-        };
-        saveCollections([...collections, newRequest]);
-    };
-
     const handleCreateCollection = () => {
         const newCollection: CollectionFolder = {
             id: Date.now().toString(),

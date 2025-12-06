@@ -30,7 +30,7 @@ export default function HistoryTab() {
                     {MOCK_HISTORY.map((req) => (
                         <RequestItem 
                             key={req.id} 
-                            request={req} 
+                            request={req as unknown as import('../../types').ApiRequest} 
                             onClick={() => vscode.postMessage({ type: 'openRequest', payload: req })} 
                         />
                     ))}

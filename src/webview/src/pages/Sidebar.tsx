@@ -16,7 +16,7 @@ export default function Sidebar() {
       {/* Header: Workspace & Actions */}
       <WorkspaceHeader />
 
-      <Stack direction={"row"} flex={1}>
+      <Stack direction={"column"} flex={1}>
         {/* Left Navigation Rail */}
         <SidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
 

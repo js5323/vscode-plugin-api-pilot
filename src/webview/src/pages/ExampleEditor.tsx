@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Button, Chip, Paper, Divider } from '@mui/material';
+import { Box, Typography, Button, Chip, Paper } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { getVsCodeApi } from '../utils/vscode';
 import { ApiExample, ApiRequest } from '../types';
 
 const vscode = getVsCodeApi();
-
-interface ExampleEditorProps {
-}
 
 export default function ExampleEditor() {
     const [example, setExample] = useState<ApiExample | null>(null);
@@ -26,9 +23,8 @@ export default function ExampleEditor() {
             }
         }
 
-        const handleMessage = (event: MessageEvent) => {
-            const message = event.data;
-             // Handle updates if needed
+        const handleMessage = () => {
+            // Handle updates if needed
         };
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
