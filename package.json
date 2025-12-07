@@ -1,70 +1,79 @@
 {
-  "name": "apipilot",
-  "displayName": "ApiPilot",
-  "description": "A powerful API Client for VS Code",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.90.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [],
-  "main": "./out/extension/main.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "apipilot.start",
-        "title": "ApiPilot: Start"
-      },
-      {
-        "command": "apipilot.createRequest",
-        "title": "ApiPilot: New Request"
-      }
-    ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "apipilot-sidebar-view",
-          "title": "ApiPilot",
-          "icon": "docs/icon.png"
-        }
-      ]
+    "name": "apipilot",
+    "displayName": "ApiPilot",
+    "description": "A powerful API Client for VS Code",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.90.0"
     },
-    "views": {
-      "apipilot-sidebar-view": [
-        {
-          "type": "webview",
-          "id": "apipilot-sidebar",
-          "name": "ApiPilot",
-          "icon": "docs/icon.png",
-          "contextualTitle": "ApiPilot"
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [],
+    "main": "./out/extension/main.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "apipilot.start",
+                "title": "ApiPilot: Start"
+            },
+            {
+                "command": "apipilot.createRequest",
+                "title": "ApiPilot: New Request"
+            }
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "apipilot-sidebar-view",
+                    "title": "ApiPilot",
+                    "icon": "docs/icon.png"
+                }
+            ]
+        },
+        "views": {
+            "apipilot-sidebar-view": [
+                {
+                    "type": "webview",
+                    "id": "apipilot-sidebar",
+                    "name": "ApiPilot",
+                    "icon": "docs/icon.png",
+                    "contextualTitle": "ApiPilot"
+                }
+            ]
         }
-      ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js",
+        "build:webview": "cd src/webview && npm install && npm run build",
+        "dev:webview": "cd src/webview && npm run dev",
+        "prepare": "husky"
+    },
+    "devDependencies": {
+        "@types/glob": "^8.1.0",
+        "@types/node": "20.12.7",
+        "@types/vscode": "^1.90.0",
+        "@typescript-eslint/eslint-plugin": "^8.48.1",
+        "@typescript-eslint/parser": "^8.48.1",
+        "eslint": "^9.39.1",
+        "glob": "^10.3.12",
+        "husky": "^9.1.7",
+        "lint-staged": "^16.2.7",
+        "prettier": "^3.7.4",
+        "typescript": "^5.4.5"
+    },
+    "dependencies": {
+        "axios": "^1.6.8",
+        "curlconverter": "^4.12.0"
+    },
+    "lint-staged": {
+        "**/*.{ts,tsx,js,jsx,json,md,html,css}": [
+            "prettier --write"
+        ]
     }
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js",
-    "build:webview": "cd src/webview && npm install && npm run build",
-    "dev:webview": "cd src/webview && npm run dev"
-  },
-  "devDependencies": {
-    "@types/glob": "^8.1.0",
-    "@types/node": "20.12.7",
-    "@types/vscode": "^1.90.0",
-    "@typescript-eslint/eslint-plugin": "^8.48.1",
-    "@typescript-eslint/parser": "^8.48.1",
-    "eslint": "^9.39.1",
-    "glob": "^10.3.12",
-    "typescript": "^5.4.5"
-  },
-  "dependencies": {
-    "axios": "^1.6.8",
-    "curlconverter": "^4.12.0"
-  }
 }

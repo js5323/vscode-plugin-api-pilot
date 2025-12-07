@@ -10,16 +10,17 @@ import BodyEditor from '../components/RequestEditor/BodyEditor';
 const vscode = getVsCodeApi();
 
 const migrateRequest = (data: any): ApiRequest => {
-    if (!data) return {
-        id: '',
-        name: 'New Request',
-        method: 'GET',
-        url: '',
-        type: 'request',
-        headers: [],
-        queryParams: [],
-        body: { type: 'none' }
-    };
+    if (!data)
+        return {
+            id: '',
+            name: 'New Request',
+            method: 'GET',
+            url: '',
+            type: 'request',
+            headers: [],
+            queryParams: [],
+            body: { type: 'none' }
+        };
 
     const newData = { ...data };
 
@@ -36,7 +37,7 @@ const migrateRequest = (data: any): ApiRequest => {
 
     // Migrate headers (record to array)
     if (data.headers && !Array.isArray(data.headers)) {
-         newData.headers = Object.entries(data.headers).map(([key, value]) => ({
+        newData.headers = Object.entries(data.headers).map(([key, value]) => ({
             id: Math.random().toString(),
             key,
             value: String(value),
@@ -46,11 +47,11 @@ const migrateRequest = (data: any): ApiRequest => {
 
     // Migrate body
     if (data.body && (typeof data.body === 'string' || (typeof data.body === 'object' && !data.body.type))) {
-         if (typeof data.body === 'string') {
-             newData.body = { type: 'raw', raw: data.body };
-         } else {
-             newData.body = { type: 'raw', raw: JSON.stringify(data.body, null, 2) };
-         }
+        if (typeof data.body === 'string') {
+            newData.body = { type: 'raw', raw: data.body };
+        } else {
+            newData.body = { type: 'raw', raw: JSON.stringify(data.body, null, 2) };
+        }
     }
 
     // Ensure arrays exist
@@ -62,30 +63,26 @@ const migrateRequest = (data: any): ApiRequest => {
 };
 
 interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+    children?: React.ReactNode;
+    index: number;
+    value: number;
 }
 
 function CustomTabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+    const { children, value, index, ...other } = props;
 
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-      style={{ height: '100%' }}
-    >
-      {value === index && (
-        <Box sx={{ p: 2, height: '100%', boxSizing: 'border-box' }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
+    return (
+        <div
+            role="tabpanel"
+            hidden={value !== index}
+            id={`simple-tabpanel-${index}`}
+            aria-labelledby={`simple-tab-${index}`}
+            {...other}
+            style={{ height: '100%' }}
+        >
+            {value === index && <Box sx={{ p: 2, height: '100%', boxSizing: 'border-box' }}>{children}</Box>}
+        </div>
+    );
 }
 
 export default function RequestEditor() {
@@ -117,7 +114,7 @@ export default function RequestEditor() {
     };
 
     const handleChange = (field: keyof ApiRequest, value: any) => {
-        setRequest(prev => ({ ...prev, [field]: value }));
+        setRequest((prev) => ({ ...prev, [field]: value }));
     };
 
     const handleParamsChange = (items: KeyValueItem[]) => {
@@ -135,35 +132,41 @@ export default function RequestEditor() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             {/* Header / URL Bar */}
-            <Paper square sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Paper square sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <FormControl size="small" sx={{ minWidth: 100 }}>
                     <Select
                         value={request.method}
                         onChange={(e) => handleChange('method', e.target.value)}
                         displayEmpty
                     >
-                        {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map(method => (
-                            <MenuItem key={method} value={method}>{method}</MenuItem>
+                        {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map((method) => (
+                            <MenuItem key={method} value={method}>
+                                {method}
+                            </MenuItem>
                         ))}
                     </Select>
                 </FormControl>
-                <TextField 
-                    fullWidth 
-                    size="small" 
-                    placeholder="Enter request URL" 
-                    value={request.url} 
+                <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Enter request URL"
+                    value={request.url}
                     onChange={(e) => handleChange('url', e.target.value)}
                 />
-                <Button 
-                    variant="contained" 
-                    startIcon={<PlayArrowIcon />} 
+                <Button
+                    variant="contained"
+                    size="medium"
+                    sx={{ padding: '8px 16px' }}
+                    startIcon={<PlayArrowIcon />}
                     onClick={handleSend}
                     disableElevation
                 >
                     Send
                 </Button>
-                <Button 
-                    variant="outlined" 
+                <Button
+                    size="medium"
+                    sx={{ padding: '8px 16px' }}
+                    variant="outlined"
                     startIcon={<SaveIcon />}
                     onClick={handleSave}
                 >
@@ -172,13 +175,29 @@ export default function RequestEditor() {
             </Paper>
 
             {/* Main Content Area */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, overflow: 'hidden' }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flexGrow: 1,
+                    overflow: 'hidden'
+                }}
+            >
                 {/* Top: Request Config */}
-                <Box sx={{ flexGrow: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <Box
+                    sx={{
+                        flexGrow: 1,
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                    }}
+                >
                     <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                        <Tabs 
-                            value={tabValue} 
-                            onChange={(_, v) => setTabValue(v)} 
+                        <Tabs
+                            value={tabValue}
+                            onChange={(_, v) => setTabValue(v)}
                             variant="scrollable"
                             scrollButtons="auto"
                             sx={{ minHeight: 48 }}
@@ -198,9 +217,9 @@ export default function RequestEditor() {
                             <Typography color="text.secondary">Documentation (Coming Soon)</Typography>
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={1}>
-                            <KeyValueTable 
-                                items={request.queryParams || []} 
-                                onChange={handleParamsChange} 
+                            <KeyValueTable
+                                items={request.queryParams || []}
+                                onChange={handleParamsChange}
                                 title="Query Params"
                             />
                         </CustomTabPanel>
@@ -208,17 +227,15 @@ export default function RequestEditor() {
                             <Typography color="text.secondary">Authorization (Coming Soon)</Typography>
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={3}>
-                            <KeyValueTable 
-                                items={request.headers || []} 
-                                onChange={handleHeadersChange} 
+                            <KeyValueTable
+                                items={request.headers || []}
+                                onChange={handleHeadersChange}
                                 title="Headers"
+                                enablePresets={true}
                             />
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={4}>
-                             <BodyEditor 
-                                body={request.body || { type: 'none' }} 
-                                onChange={handleBodyChange}
-                             />
+                            <BodyEditor body={request.body || { type: 'none' }} onChange={handleBodyChange} />
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={5}>
                             <Typography color="text.secondary">Scripts (Coming Soon)</Typography>
@@ -233,23 +250,55 @@ export default function RequestEditor() {
                 </Box>
 
                 {/* Bottom: Response */}
-                <Box sx={{ height: '40%', display: 'flex', flexDirection: 'column', p: 2, bgcolor: 'background.default', borderTop: 1, borderColor: 'divider' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Box
+                    sx={{
+                        height: '40%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        p: 2,
+                        bgcolor: 'background.default',
+                        borderTop: 1,
+                        borderColor: 'divider'
+                    }}
+                >
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            mb: 1
+                        }}
+                    >
                         <Typography variant="subtitle2">Response</Typography>
                         <Box sx={{ display: 'flex', gap: 2 }}>
-                             <Typography variant="caption" color="text.secondary">Status: {response ? response.status : '-'}</Typography>
-                             <Typography variant="caption" color="text.secondary">Time: {response ? response.time + 'ms' : '-'}</Typography>
-                             <Typography variant="caption" color="text.secondary">Size: {response ? response.size + 'B' : '-'}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                Status: {response ? response.status : '-'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                Time: {response ? response.time + 'ms' : '-'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                Size: {response ? response.size + 'B' : '-'}
+                            </Typography>
                         </Box>
                     </Box>
                     {response ? (
-                         <Paper variant="outlined" sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
+                        <Paper variant="outlined" sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
                             <pre style={{ margin: 0, fontSize: '0.85rem' }}>
                                 {JSON.stringify(response.data || response, null, 2)}
                             </pre>
                         </Paper>
                     ) : (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexGrow: 1, color: 'text.secondary' }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexGrow: 1,
+                                color: 'text.secondary'
+                            }}
+                        >
                             <Typography variant="body1">Enter the URL and click Send to get a response</Typography>
                         </Box>
                     )}
