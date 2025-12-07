@@ -1,7 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Tabs, Tab, TextField, Button, Select, MenuItem, FormControl } from '@mui/material';
+import { useState, useEffect, useRef } from 'react';
+import {
+    Box,
+    Typography,
+    Paper,
+    Tabs,
+    Tab,
+    TextField,
+    Button,
+    Select,
+    MenuItem,
+    FormControl,
+    IconButton,
+    Tooltip
+} from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveIcon from '@mui/icons-material/Save';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
+import HorizontalSplitIcon from '@mui/icons-material/HorizontalSplit';
+import Editor from '@monaco-editor/react';
 import { getVsCodeApi } from '../utils/vscode';
 import { ApiRequest, ApiRequestBody, KeyValueItem } from '../types';
 import KeyValueTable from '../components/RequestEditor/KeyValueTable';
@@ -90,6 +107,55 @@ export default function RequestEditor() {
     const [request, setRequest] = useState<ApiRequest>(migrateRequest(initialData));
     const [tabValue, setTabValue] = useState(0);
     const [response, setResponse] = useState<any>(null);
+    const [layout, setLayout] = useState<'vertical' | 'horizontal'>('vertical');
+    const [splitPos, setSplitPos] = useState(50); // percentage
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isDragging = useRef(false);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        isDragging.current = true;
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isDragging.current || !containerRef.current) return;
+
+        const containerRect = containerRef.current.getBoundingClientRect();
+        let newPos = 0;
+
+        if (layout === 'vertical') {
+            // Vertical layout: Top / Bottom
+            const relativeY = e.clientY - containerRect.top;
+            newPos = (relativeY / containerRect.height) * 100;
+        } else {
+            // Horizontal layout: Left / Right
+            const relativeX = e.clientX - containerRect.left;
+            newPos = (relativeX / containerRect.width) * 100;
+        }
+
+        // Clamp between 20% and 80%
+        newPos = Math.min(Math.max(newPos, 20), 80);
+        setSplitPos(newPos);
+    };
+
+    const handleMouseUp = () => {
+        isDragging.current = false;
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    const toggleLayout = () => {
+        setLayout((prev) => (prev === 'vertical' ? 'horizontal' : 'vertical'));
+    };
+
+    const copyToClipboard = () => {
+        if (response) {
+            const text =
+                typeof response.data === 'object' ? JSON.stringify(response.data, null, 2) : String(response.data);
+            navigator.clipboard.writeText(text);
+        }
+    };
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -203,31 +269,31 @@ export default function RequestEditor() {
 
             {/* Main Content Area */}
             <Box
+                ref={containerRef}
                 sx={{
                     display: 'flex',
-                    flexDirection: 'column',
+                    flexDirection: layout === 'vertical' ? 'column' : 'row',
                     flexGrow: 1,
                     overflow: 'hidden'
                 }}
             >
-                {/* Top: Request Config */}
+                {/* Request Config */}
                 <Box
                     sx={{
-                        flexGrow: 1,
-                        borderBottom: 1,
-                        borderColor: 'divider',
+                        height: layout === 'vertical' ? `${splitPos}%` : '100%',
+                        width: layout === 'horizontal' ? `${splitPos}%` : '100%',
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden'
                     }}
                 >
-                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center' }}>
                         <Tabs
                             value={tabValue}
                             onChange={(_, v) => setTabValue(v)}
                             variant="scrollable"
                             scrollButtons="auto"
-                            sx={{ minHeight: 48 }}
+                            sx={{ minHeight: 48, flexGrow: 1 }}
                         >
                             <Tab label="Docs" />
                             <Tab label="Params" />
@@ -238,6 +304,11 @@ export default function RequestEditor() {
                             <Tab label="Tests" />
                             <Tab label="Settings" />
                         </Tabs>
+                        <Tooltip title={`Switch to ${layout === 'vertical' ? 'Horizontal' : 'Vertical'} Layout`}>
+                            <IconButton onClick={toggleLayout} size="small" sx={{ mr: 1 }}>
+                                {layout === 'vertical' ? <HorizontalSplitIcon /> : <VerticalSplitIcon />}
+                            </IconButton>
+                        </Tooltip>
                     </Box>
                     <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
                         <CustomTabPanel value={tabValue} index={0}>
@@ -276,16 +347,30 @@ export default function RequestEditor() {
                     </Box>
                 </Box>
 
-                {/* Bottom: Response */}
+                {/* Separator */}
+                <Box
+                    onMouseDown={handleMouseDown}
+                    sx={{
+                        cursor: layout === 'vertical' ? 'row-resize' : 'col-resize',
+                        height: layout === 'vertical' ? '4px' : '100%',
+                        width: layout === 'horizontal' ? '4px' : '100%',
+                        bgcolor: 'divider',
+                        zIndex: 1,
+                        transition: 'background-color 0.2s',
+                        '&:hover': {
+                            bgcolor: 'primary.main'
+                        }
+                    }}
+                />
+
+                {/* Response */}
                 <Box
                     sx={{
-                        height: '40%',
+                        height: layout === 'vertical' ? `${100 - splitPos}%` : '100%',
+                        width: layout === 'horizontal' ? `${100 - splitPos}%` : '100%',
                         display: 'flex',
                         flexDirection: 'column',
-                        p: 2,
-                        bgcolor: 'background.default',
-                        borderTop: 1,
-                        borderColor: 'divider'
+                        bgcolor: 'background.default'
                     }}
                 >
                     <Box
@@ -293,11 +378,13 @@ export default function RequestEditor() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            mb: 1
+                            p: 1,
+                            borderBottom: 1,
+                            borderColor: 'divider'
                         }}
                     >
                         <Typography variant="subtitle2">Response</Typography>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                             <Typography variant="caption" color="text.secondary">
                                 Status: {response ? response.status : '-'}
                             </Typography>
@@ -307,14 +394,33 @@ export default function RequestEditor() {
                             <Typography variant="caption" color="text.secondary">
                                 Size: {response ? response.size + 'B' : '-'}
                             </Typography>
+                            <Tooltip title="Copy Response">
+                                <IconButton size="small" onClick={copyToClipboard} disabled={!response}>
+                                    <ContentCopyIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
                         </Box>
                     </Box>
                     {response ? (
-                        <Paper variant="outlined" sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
-                            <pre style={{ margin: 0, fontSize: '0.85rem' }}>
-                                {JSON.stringify(response.data || response, null, 2)}
-                            </pre>
-                        </Paper>
+                        <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                            <Editor
+                                height="100%"
+                                language="json"
+                                value={
+                                    typeof response.data === 'object'
+                                        ? JSON.stringify(response.data, null, 2)
+                                        : String(response.data)
+                                }
+                                options={{
+                                    readOnly: true,
+                                    minimap: { enabled: false },
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    wordWrap: 'on',
+                                    automaticLayout: true
+                                }}
+                            />
+                        </Box>
                     ) : (
                         <Box
                             sx={{

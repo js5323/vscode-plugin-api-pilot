@@ -233,51 +233,16 @@ export default function KeyValueTable({
                                         />
                                     </TableCell>
                                     <TableCell sx={{ p: 0.5 }}>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            variant="standard"
-                                            placeholder="Key"
-                                            value={row.key}
-                                            onChange={(e) => handleItemChange(row.id, 'key', e.target.value)}
-                                            InputProps={{ disableUnderline: true }}
-                                        />
-                                    </TableCell>
-                                    <TableCell sx={{ p: 0.5 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            {enableFileSupport && row.type === 'file' ? (
-                                                <Button
-                                                    fullWidth
-                                                    variant="outlined"
-                                                    size="small"
-                                                    startIcon={<UploadFileIcon />}
-                                                    onClick={() => onSelectFile?.(row.id)}
-                                                    title={row.value}
-                                                    sx={{
-                                                        flexGrow: 1,
-                                                        justifyContent: 'flex-start',
-                                                        textTransform: 'none',
-                                                        borderColor: 'divider',
-                                                        color: row.value ? 'text.primary' : 'text.secondary',
-                                                        height: '32px',
-                                                        overflow: 'hidden',
-                                                        whiteSpace: 'nowrap'
-                                                    }}
-                                                >
-                                                    {row.value ? row.value.split(/[/\\]/).pop() : 'Select File'}
-                                                </Button>
-                                            ) : (
-                                                <TextField
-                                                    fullWidth
-                                                    size="small"
-                                                    variant="standard"
-                                                    placeholder="Value"
-                                                    value={row.value}
-                                                    onChange={(e) => handleItemChange(row.id, 'value', e.target.value)}
-                                                    InputProps={{ disableUnderline: true }}
-                                                />
-                                            )}
-
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                variant="standard"
+                                                placeholder="Key"
+                                                value={row.key}
+                                                onChange={(e) => handleItemChange(row.id, 'key', e.target.value)}
+                                                InputProps={{ disableUnderline: true }}
+                                            />
                                             {enableFileSupport && (
                                                 <Select
                                                     value={row.type || 'text'}
@@ -300,6 +265,40 @@ export default function KeyValueTable({
                                                 </Select>
                                             )}
                                         </Box>
+                                    </TableCell>
+                                    <TableCell sx={{ p: 0.5 }}>
+                                        {enableFileSupport && row.type === 'file' ? (
+                                            <Button
+                                                fullWidth
+                                                variant="outlined"
+                                                size="small"
+                                                startIcon={<UploadFileIcon />}
+                                                onClick={() => onSelectFile?.(row.id)}
+                                                title={row.value}
+                                                sx={{
+                                                    flexGrow: 1,
+                                                    justifyContent: 'flex-start',
+                                                    textTransform: 'none',
+                                                    borderColor: 'divider',
+                                                    color: row.value ? 'text.primary' : 'text.secondary',
+                                                    height: '32px',
+                                                    overflow: 'hidden',
+                                                    whiteSpace: 'nowrap'
+                                                }}
+                                            >
+                                                {row.value ? row.value.split(/[/\\]/).pop() : 'Select File'}
+                                            </Button>
+                                        ) : (
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                variant="standard"
+                                                placeholder="Value"
+                                                value={row.value}
+                                                onChange={(e) => handleItemChange(row.id, 'value', e.target.value)}
+                                                InputProps={{ disableUnderline: true }}
+                                            />
+                                        )}
                                     </TableCell>
                                     <TableCell sx={{ p: 0.5 }}>
                                         <TextField

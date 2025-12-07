@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import Editor from '@monaco-editor/react';
 import {
     Box,
     RadioGroup,
@@ -173,23 +174,29 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                                 </Button>
                             </Box>
                         </Stack>
-                        <TextField
-                            multiline
-                            fullWidth
-                            minRows={10}
-                            placeholder="Raw body content"
-                            value={body.raw || ''}
-                            onChange={(e) => handleRawChange(e.target.value)}
-                            sx={{
-                                flexGrow: 1,
-                                fontFamily: 'monospace',
-                                '& .MuiInputBase-root': {
-                                    fontFamily: 'monospace',
-                                    height: '100%',
-                                    alignItems: 'flex-start'
+                        <Box
+                            sx={{ flexGrow: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}
+                        >
+                            <Editor
+                                height="100%"
+                                language={
+                                    body.rawType?.toLowerCase() === 'text'
+                                        ? 'plaintext'
+                                        : body.rawType?.toLowerCase() || 'json'
                                 }
-                            }}
-                        />
+                                value={body.raw || ''}
+                                onChange={(value) => handleRawChange(value || '')}
+                                options={{
+                                    minimap: { enabled: false },
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    wordWrap: 'on',
+                                    automaticLayout: true,
+                                    formatOnPaste: true,
+                                    formatOnType: true
+                                }}
+                            />
+                        </Box>
                     </Box>
                 )}
 
