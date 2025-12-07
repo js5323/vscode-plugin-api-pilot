@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { RequestHandler } from './RequestHandler';
+import { Logger } from './utils/Logger';
 
 export class RequestPanel {
     public static currentPanels = new Map<string, RequestPanel>();
@@ -57,15 +58,37 @@ export class RequestPanel {
             async (message) => {
                 switch (message.type) {
                     case 'executeRequest': {
-                        const environments = this._context.globalState.get<any[]>('apipilot.environments', []);
-                        const activeEnv = environments.find((e) => e.isActive);
-                        const variables = activeEnv ? activeEnv.variables : [];
+                        try {
+                            Logger.log('Execute Request Command Received');
 
-                        const response = await RequestHandler.makeRequest(message.payload, variables);
-                        this._panel.webview.postMessage({
-                            type: 'executeResponse',
-                            payload: response
-                        });
+                            const environments = this._context.globalState.get<any[]>('apipilot.environments', []);
+                            const activeEnv = environments.find((e) => e.isActive);
+                            const variables = activeEnv ? activeEnv.variables : [];
+
+                            Logger.log(`Active Environment: ${activeEnv ? activeEnv.name : 'None'}`);
+
+                            const response = await RequestHandler.makeRequest(message.payload, variables);
+
+                            Logger.log(`Request Execution Completed. Status: ${response.status}`);
+
+                            this._panel.webview.postMessage({
+                                type: 'executeResponse',
+                                payload: response
+                            });
+                        } catch (error: any) {
+                            Logger.error('Unexpected Error in RequestPanel:', error);
+                            this._panel.webview.postMessage({
+                                type: 'executeResponse',
+                                payload: {
+                                    status: 0,
+                                    statusText: 'Error',
+                                    data: error.message || 'An unexpected error occurred',
+                                    headers: {},
+                                    duration: 0,
+                                    size: 0
+                                }
+                            });
+                        }
                         break;
                     }
                     case 'onInfo': {
@@ -175,8 +198,8 @@ export class RequestPanel {
         const initialDataScript = initialData ? `window.initialData = ${JSON.stringify(initialData)};` : '';
 
         const csp = isDev
-            ? `default-src 'none'; connect-src ${webview.cspSource} https: http://localhost:5173 ws://localhost:5173 data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' http://localhost:5173; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' http://localhost:5173; font-src ${webview.cspSource} https: data:;`
-            : `default-src 'none'; connect-src ${webview.cspSource} https: data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval'; font-src ${webview.cspSource} https: data:;`;
+            ? `default-src 'none'; connect-src ${webview.cspSource} https: http://localhost:5173 ws://localhost:5173 data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' http://localhost:5173; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' http://localhost:5173 blob:; worker-src blob:; font-src ${webview.cspSource} https: data:;`
+            : `default-src 'none'; connect-src ${webview.cspSource} https: data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' blob:; worker-src blob:; font-src ${webview.cspSource} https: data:;`;
 
         return `<!DOCTYPE html>
 			<html lang="en">

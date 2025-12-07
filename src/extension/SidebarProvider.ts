@@ -3,15 +3,14 @@ import { RequestHandler } from './RequestHandler';
 import { RequestPanel } from './RequestPanel';
 import { ExamplePanel } from './ExamplePanel';
 import { EnvironmentPanel } from './EnvironmentPanel';
+import { Logger } from './utils/Logger';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
     _doc?: vscode.TextDocument;
-    private _outputChannel: vscode.OutputChannel;
 
     constructor(private readonly _context: vscode.ExtensionContext) {
         this._extensionUri = _context.extensionUri;
-        this._outputChannel = vscode.window.createOutputChannel('ApiPilot Debug');
     }
 
     private readonly _extensionUri: vscode.Uri;
@@ -23,7 +22,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     ) {
         this._view = webviewView;
 
-        this._outputChannel.appendLine('resolveWebviewView called');
+        Logger.log('resolveWebviewView called');
 
         webviewView.webview.options = {
             // Allow scripts in the webview
@@ -38,14 +37,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             switch (data.type) {
                 case 'executeRequest': {
                     try {
-                        this._outputChannel.appendLine(`Executing request: ${JSON.stringify(data.payload)}`);
+                        Logger.log(`Executing request: ${JSON.stringify(data.payload)}`);
                         const response = await RequestHandler.makeRequest(data.payload);
                         webviewView.webview.postMessage({
                             type: 'executeResponse',
                             payload: response
                         });
                     } catch (error) {
-                        this._outputChannel.appendLine(`Error executing request: ${error}`);
+                        Logger.error(`Error executing request: ${error}`);
                         webviewView.webview.postMessage({
                             type: 'executeResponse',
                             payload: { error: String(error) }
@@ -55,7 +54,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 }
                 case 'parseCurl': {
                     try {
-                        this._outputChannel.appendLine(`Parsing cURL: ${data.value}`);
+                        Logger.log(`Parsing cURL: ${data.value}`);
                         // Mock parsing for now
                         const mockParsed = {
                             method: 'GET',
@@ -69,7 +68,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             payload: mockParsed
                         });
                     } catch (e) {
-                        this._outputChannel.appendLine(`Error parsing cURL: ${e}`);
+                        Logger.error(`Error parsing cURL: ${e}`);
                         vscode.window.showErrorMessage('Error parsing cURL: ' + e);
                     }
                     break;
@@ -78,7 +77,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     if (!data.value) {
                         return;
                     }
-                    this._outputChannel.appendLine(`Info from Webview: ${data.value}`);
+                    Logger.log(`Info from Webview: ${data.value}`);
                     vscode.window.showInformationMessage(data.value);
                     break;
                 }
@@ -86,7 +85,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     if (!data.value) {
                         return;
                     }
-                    this._outputChannel.appendLine(`Error from Webview: ${data.value}`);
+                    Logger.error(`Error from Webview: ${data.value}`);
                     vscode.window.showErrorMessage(data.value);
                     break;
                 }
@@ -107,7 +106,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'log': {
-                    this._outputChannel.appendLine(`Log from Webview: ${data.value}`);
+                    Logger.log(`Log from Webview: ${data.value}`);
                     break;
                 }
                 case 'getCollections': {
@@ -177,8 +176,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 .toString();
         }
 
-        this._outputChannel.appendLine(`Mode: ${isDev ? 'Development' : 'Production'}`);
-        this._outputChannel.appendLine(`Script URI: ${scriptUri}`);
+        Logger.log(`Mode: ${isDev ? 'Development' : 'Production'}`);
+        Logger.log(`Script URI: ${scriptUri}`);
 
         const nonce = getNonce();
 

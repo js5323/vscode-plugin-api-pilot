@@ -19,6 +19,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import KeyValueTable from './KeyValueTable';
 import { ApiRequestBody, KeyValueItem } from '../../types';
+import { useVsCodeTheme } from '../../hooks/useVsCodeTheme';
 
 const vscode = (window as any).vscode;
 
@@ -28,6 +29,8 @@ interface BodyEditorProps {
 }
 
 export default function BodyEditor({ body, onChange }: BodyEditorProps) {
+    const theme = useVsCodeTheme();
+
     const handleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         onChange({ ...body, type: event.target.value as any });
     };
@@ -76,7 +79,19 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2, pb: 1 }}>
+            <Box
+                sx={{
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                    mb: 2,
+                    pb: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 1
+                }}
+            >
                 <RadioGroup row value={body.type} onChange={handleTypeChange}>
                     <FormControlLabel
                         value="none"
@@ -109,9 +124,48 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                         label={<Typography variant="body2">GraphQL</Typography>}
                     />
                 </RadioGroup>
+
+                {body.type === 'raw' && (
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <Select
+                            value={body.rawType || 'JSON'}
+                            onChange={(e) => onChange({ ...body, rawType: e.target.value as any })}
+                            size="small"
+                            variant="standard"
+                            disableUnderline
+                            sx={{ fontSize: '0.85rem', fontWeight: 'bold', minWidth: 60 }}
+                        >
+                            {['Text', 'JavaScript', 'JSON', 'HTML', 'XML'].map((t) => (
+                                <MenuItem key={t} value={t} dense>
+                                    {t}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    cursor: 'pointer',
+                                    color: 'text.secondary'
+                                }}
+                            >
+                                <Typography variant="caption">Schema</Typography>
+                            </Box>
+                            <Button
+                                size="small"
+                                onClick={handleBeautify}
+                                sx={{ textTransform: 'none', fontWeight: 'bold' }}
+                            >
+                                Beautify
+                            </Button>
+                        </Box>
+                    </Stack>
+                )}
             </Box>
 
-            <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+            <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {body.type === 'none' && (
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, color: 'text.secondary' }}>
                         This request does not have a body
@@ -119,84 +173,44 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                 )}
 
                 {body.type === 'form-data' && (
-                    <KeyValueTable
-                        items={body.formData || []}
-                        onChange={handleFormDataChange}
-                        enableFileSupport={true}
-                        onSelectFile={handleSelectFile}
-                    />
+                    <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                        <KeyValueTable
+                            items={body.formData || []}
+                            onChange={handleFormDataChange}
+                            enableFileSupport={true}
+                            onSelectFile={handleSelectFile}
+                        />
+                    </Box>
                 )}
 
                 {body.type === 'x-www-form-urlencoded' && (
-                    <KeyValueTable items={body.urlencoded || []} onChange={handleUrlEncodedChange} />
+                    <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                        <KeyValueTable items={body.urlencoded || []} onChange={handleUrlEncodedChange} />
+                    </Box>
                 )}
 
                 {body.type === 'raw' && (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing={1}
-                            sx={{ mb: 1, justifyContent: 'flex-end' }}
-                        >
-                            <Select
-                                value={body.rawType || 'JSON'}
-                                onChange={(e) => onChange({ ...body, rawType: e.target.value as any })}
-                                size="small"
-                                variant="standard"
-                                disableUnderline
-                                sx={{ fontSize: '0.85rem', fontWeight: 'bold', minWidth: 60 }}
-                            >
-                                {['Text', 'JavaScript', 'JSON', 'HTML', 'XML'].map((t) => (
-                                    <MenuItem key={t} value={t} dense>
-                                        {t}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 0.5,
-                                        cursor: 'pointer',
-                                        color: 'text.secondary'
-                                    }}
-                                >
-                                    <Typography variant="caption">Schema</Typography>
-                                </Box>
-                                <Button
-                                    size="small"
-                                    onClick={handleBeautify}
-                                    sx={{ textTransform: 'none', fontWeight: 'bold' }}
-                                >
-                                    Beautify
-                                </Button>
-                            </Box>
-                        </Stack>
-                        <Box
-                            sx={{ flexGrow: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}
-                        >
-                            <Editor
-                                height="100%"
-                                language={
-                                    body.rawType?.toLowerCase() === 'text'
-                                        ? 'plaintext'
-                                        : body.rawType?.toLowerCase() || 'json'
-                                }
-                                value={body.raw || ''}
-                                onChange={(value) => handleRawChange(value || '')}
-                                options={{
-                                    minimap: { enabled: false },
-                                    lineNumbers: 'on',
-                                    scrollBeyondLastLine: false,
-                                    wordWrap: 'on',
-                                    automaticLayout: true,
-                                    formatOnPaste: true,
-                                    formatOnType: true
-                                }}
-                            />
-                        </Box>
+                    <Box sx={{ flexGrow: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                        <Editor
+                            height="100%"
+                            theme={theme}
+                            language={
+                                body.rawType?.toLowerCase() === 'text'
+                                    ? 'plaintext'
+                                    : body.rawType?.toLowerCase() || 'json'
+                            }
+                            value={body.raw || ''}
+                            onChange={(value) => handleRawChange(value || '')}
+                            options={{
+                                minimap: { enabled: false },
+                                lineNumbers: 'on',
+                                scrollBeyondLastLine: false,
+                                wordWrap: 'on',
+                                automaticLayout: true,
+                                formatOnPaste: true,
+                                formatOnType: true
+                            }}
+                        />
                     </Box>
                 )}
 

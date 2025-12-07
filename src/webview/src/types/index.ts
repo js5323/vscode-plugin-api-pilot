@@ -31,6 +31,7 @@ export interface ApiRequest {
     body?: ApiRequestBody;
     queryParams?: KeyValueItem[];
     auth?: any;
+    description?: string;
     type: 'request';
     parentId?: string; // ID of parent folder or collection, or undefined if root
     examples?: ApiExample[];

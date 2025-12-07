@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 import { SidebarProvider } from './SidebarProvider';
 import { RequestPanel } from './RequestPanel';
+import { Logger } from './utils/Logger';
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('ApiPilot is now active!');
+    Logger.initialize('ApiPilot Debug');
+    Logger.log('ApiPilot is now active!');
 
     const sidebarProvider = new SidebarProvider(context);
 

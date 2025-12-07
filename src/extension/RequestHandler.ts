@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { URLSearchParams } from 'url';
+import { Logger } from './utils/Logger';
 
 export interface ApiRequest {
     method: string;
@@ -21,6 +22,10 @@ export interface ApiResponse {
 
 export class RequestHandler {
     static async makeRequest(request: ApiRequest, variables: any[] = []): Promise<ApiResponse> {
+        Logger.log('Starting Request Execution...');
+        Logger.log(`Request Method: ${request.method}`);
+        Logger.log(`Raw URL: ${request.url}`);
+
         const startTime = Date.now();
 
         // Helper for substitution
@@ -32,25 +37,33 @@ export class RequestHandler {
                 }
             });
         }
+        Logger.log(`Environment Variables Loaded: ${Object.keys(envMap).length}`);
 
         const substitute = (str: string): string => {
             if (!str) return str;
             return str.replace(/\{\{(.+?)\}\}/g, (_, key) => {
                 const k = key.trim();
-                return envMap.hasOwnProperty(k) ? envMap[k] : `{{${key}}}`;
+                const val = envMap.hasOwnProperty(k) ? envMap[k] : `{{${key}}}`;
+                return val;
             });
         };
 
         const finalUrl = substitute(request.url);
+        Logger.log(`Final URL: ${finalUrl}`);
 
         // 1. Process Params
         const params: Record<string, string> = {};
         if (Array.isArray(request.queryParams)) {
             request.queryParams.forEach((p) => {
                 if (p.isEnabled && p.key) {
-                    params[substitute(p.key)] = substitute(p.value);
+                    const key = substitute(p.key);
+                    const val = substitute(p.value);
+                    params[key] = val;
                 }
             });
+        }
+        if (Object.keys(params).length > 0) {
+            Logger.log('Query Params:', params);
         }
 
         // 2. Process Headers
@@ -58,15 +71,20 @@ export class RequestHandler {
         if (Array.isArray(request.headers)) {
             request.headers.forEach((h) => {
                 if (h.isEnabled && h.key) {
-                    headers[substitute(h.key)] = substitute(h.value);
+                    const key = substitute(h.key);
+                    const val = substitute(h.value);
+                    headers[key] = val;
                 }
             });
         }
+        Logger.log('Headers:', headers);
 
         // 3. Process Body
         let data: any = null;
         if (request.body) {
             const bodyType = request.body.type;
+            Logger.log(`Processing Body Type: ${bodyType}`);
+
             if (bodyType === 'raw') {
                 data = substitute(request.body.raw || '');
             } else if (bodyType === 'x-www-form-urlencoded') {
@@ -103,12 +121,20 @@ export class RequestHandler {
             }
         }
 
+        if (data) {
+            // Avoid logging huge bodies
+            const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
+            const logData = dataStr.length > 1000 ? dataStr.substring(0, 1000) + '... (truncated)' : dataStr;
+            Logger.log('Request Body:', logData);
+        }
+
         const config: AxiosRequestConfig = {
             method: request.method,
             url: finalUrl,
             params: params,
             headers: headers,
             data: data,
+            timeout: 60000, // 60s timeout
             validateStatus: () => true, // Don't throw on error status
             transformResponse: [
                 (data) => {
@@ -126,9 +152,13 @@ export class RequestHandler {
         };
 
         try {
+            Logger.log('Sending Axios Request...');
             const response: AxiosResponse = await axios(config);
             const endTime = Date.now();
             const duration = endTime - startTime;
+
+            Logger.log(`Response Received. Status: ${response.status} ${response.statusText}`);
+            Logger.log(`Duration: ${duration}ms`);
 
             // Calculate approximate size
             const size = JSON.stringify(response.data).length + JSON.stringify(response.headers).length;
@@ -143,6 +173,12 @@ export class RequestHandler {
             };
         } catch (error: any) {
             const endTime = Date.now();
+            Logger.error('Request Failed. Error:', error.message);
+            if (error.response) {
+                Logger.error('Error Response Status:', error.response.status);
+                Logger.error('Error Response Data:', error.response.data);
+            }
+
             return {
                 status: 0,
                 statusText: 'Error',
