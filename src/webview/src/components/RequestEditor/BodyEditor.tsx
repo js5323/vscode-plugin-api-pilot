@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import Editor from '@monaco-editor/react';
 import {
     Box,

@@ -112,7 +112,7 @@ export default function RequestEditor() {
     const containerRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
 
-    const handleMouseDown = (e: React.MouseEvent) => {
+    const handleMouseDown = () => {
         isDragging.current = true;
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
