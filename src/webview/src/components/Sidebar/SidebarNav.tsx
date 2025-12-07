@@ -1,6 +1,5 @@
 import { ListItemButton, Typography, Paper } from '@mui/material';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
-import LayersIcon from '@mui/icons-material/Layers';
 import HistoryIcon from '@mui/icons-material/History';
 
 interface NavRailItemProps {
@@ -48,8 +47,8 @@ function NavRailItem({ icon, label, active, onClick }: NavRailItemProps) {
 }
 
 interface SidebarNavProps {
-    activeTab: 'collections' | 'environments' | 'history';
-    setActiveTab: (tab: 'collections' | 'environments' | 'history') => void;
+    activeTab: 'collections' | 'history';
+    setActiveTab: (tab: 'collections' | 'history') => void;
 }
 
 export default function SidebarNav({ activeTab, setActiveTab }: SidebarNavProps) {
@@ -77,12 +76,6 @@ export default function SidebarNav({ activeTab, setActiveTab }: SidebarNavProps)
                 label="History"
                 active={activeTab === 'history'}
                 onClick={() => setActiveTab('history')}
-            />
-            <NavRailItem
-                icon={<LayersIcon fontSize="small" />}
-                label="Environments"
-                active={activeTab === 'environments'}
-                onClick={() => setActiveTab('environments')}
             />
         </Paper>
     );

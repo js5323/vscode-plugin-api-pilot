@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { List, Box } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { List, Box, Typography } from '@mui/material';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import RequestItem from './RequestItem';
-import { MOCK_HISTORY } from '../../mockData';
 import { getVsCodeApi } from '../../utils/vscode';
 import SidebarSearch from './SidebarSearch';
 
@@ -10,11 +9,31 @@ const vscode = getVsCodeApi();
 
 export default function HistoryTab() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [history, setHistory] = useState<any[]>([]);
+
+    useEffect(() => {
+        vscode.postMessage({ type: 'getHistory' });
+
+        const handleMessage = (event: MessageEvent) => {
+            const msg = event.data;
+            if (msg.type === 'updateHistory') {
+                setHistory(msg.payload);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
 
     const handleClearHistory = () => {
-        // TODO: Implement clear history logic
-        console.log('Clear History');
+        vscode.postMessage({ type: 'clearHistory' });
     };
+
+    const filteredHistory = history.filter(
+        (req) =>
+            (req.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (req.url || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -26,15 +45,23 @@ export default function HistoryTab() {
                 ActionIcon={DeleteSweepIcon}
             />
             <Box sx={{ flexGrow: 1, overflow: 'auto', px: 0.5 }}>
-                <List dense>
-                    {MOCK_HISTORY.map((req) => (
-                        <RequestItem
-                            key={req.id}
-                            request={req as unknown as import('../../types').ApiRequest}
-                            onClick={() => vscode.postMessage({ type: 'openRequest', payload: req })}
-                        />
-                    ))}
-                </List>
+                {filteredHistory.length === 0 ? (
+                    <Box sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="body2" color="text.secondary">
+                            No history found.
+                        </Typography>
+                    </Box>
+                ) : (
+                    <List dense>
+                        {filteredHistory.map((req) => (
+                            <RequestItem
+                                key={req.id}
+                                request={req}
+                                onClick={() => vscode.postMessage({ type: 'openRequest', payload: req })}
+                            />
+                        ))}
+                    </List>
+                )}
             </Box>
         </Box>
     );

@@ -7,12 +7,18 @@ import { Environment, KeyValueItem } from '../types';
 export default function EnvironmentEditor() {
     const [environment, setEnvironment] = useState<Environment | null>(null);
     const [isDirty, setIsDirty] = useState(false);
+    const [settings, setSettings] = useState<any>({ general: { autoSave: true } });
 
     useEffect(() => {
         // Load initial data
         const initialData = (window as any).initialData;
         if (initialData) {
             setEnvironment(initialData);
+        }
+
+        // Get settings
+        if ((window as any).vscode) {
+            (window as any).vscode.postMessage({ type: 'getSettings' });
         }
 
         // Listen for messages
@@ -22,6 +28,9 @@ export default function EnvironmentEditor() {
                 case 'updateEnvironment':
                     setEnvironment(message.payload);
                     setIsDirty(false);
+                    break;
+                case 'updateSettings':
+                    setSettings(message.payload);
                     break;
             }
         };
@@ -39,6 +48,16 @@ export default function EnvironmentEditor() {
             setIsDirty(false);
         }
     };
+
+    // Auto Save
+    useEffect(() => {
+        if (settings.general?.autoSave && isDirty && environment) {
+            const timer = setTimeout(() => {
+                handleSave();
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [environment, isDirty, settings]);
 
     const handleNameChange = (name: string) => {
         if (environment) {
@@ -82,15 +101,22 @@ export default function EnvironmentEditor() {
                         </Typography>
                     )}
                 </Stack>
-                <Button
-                    variant="contained"
-                    startIcon={<SaveIcon />}
-                    onClick={handleSave}
-                    disabled={!isDirty}
-                    size="small"
-                >
-                    Save
-                </Button>
+                {!settings.general?.autoSave && (
+                    <Button
+                        variant="contained"
+                        startIcon={<SaveIcon />}
+                        onClick={handleSave}
+                        disabled={!isDirty}
+                        size="small"
+                    >
+                        Save
+                    </Button>
+                )}
+                {settings.general?.autoSave && (
+                    <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        Auto Save On
+                    </Typography>
+                )}
             </Box>
 
             {/* Content */}

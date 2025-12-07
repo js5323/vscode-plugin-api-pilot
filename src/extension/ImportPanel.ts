@@ -1,33 +1,26 @@
 import * as vscode from 'vscode';
-import { SettingsPanel } from './SettingsPanel';
+import { Importer } from './utils/Importer';
+import { Logger } from './utils/Logger';
 
-export class EnvironmentPanel {
-    public static currentPanels = new Map<string, EnvironmentPanel>();
+export class ImportPanel {
+    public static currentPanel: ImportPanel | undefined;
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
     private readonly _context: vscode.ExtensionContext;
     private _disposables: vscode.Disposable[] = [];
-    private readonly _environmentId?: string;
 
-    public static createOrShow(context: vscode.ExtensionContext, environment?: any) {
+    public static createOrShow(context: vscode.ExtensionContext) {
         const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
-        // If we have an environment ID, check if we already have a panel for it
-        if (environment && environment.id) {
-            const existingPanel = EnvironmentPanel.currentPanels.get(environment.id);
-            if (existingPanel) {
-                existingPanel._panel.reveal(column);
-                existingPanel._panel.webview.postMessage({
-                    type: 'updateEnvironment',
-                    payload: environment
-                });
-                return;
-            }
+        // If we already have a panel, show it.
+        if (ImportPanel.currentPanel) {
+            ImportPanel.currentPanel._panel.reveal(column);
+            return;
         }
 
         const panel = vscode.window.createWebviewPanel(
-            'apipilot-environment',
-            environment ? `${environment.name}` : 'New Environment',
+            'apipilot-import',
+            'Import Requests',
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -36,20 +29,15 @@ export class EnvironmentPanel {
             }
         );
 
-        const environmentPanel = new EnvironmentPanel(panel, context, environment);
-
-        if (environment && environment.id) {
-            EnvironmentPanel.currentPanels.set(environment.id, environmentPanel);
-        }
+        ImportPanel.currentPanel = new ImportPanel(panel, context);
     }
 
-    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, environment?: any) {
+    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
         this._panel = panel;
         this._extensionUri = context.extensionUri;
         this._context = context;
-        this._environmentId = environment?.id;
 
-        this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, environment);
+        this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
 
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
@@ -67,40 +55,65 @@ export class EnvironmentPanel {
                         break;
                     }
                     case 'log': {
-                        console.log(`Log from EnvironmentPanel: ${message.value}`);
+                        console.log(`Log from ImportPanel: ${message.value}`);
                         break;
                     }
-                    case 'saveEnvironment': {
-                        const updatedEnv = message.payload;
-                        const environments = this._context.globalState.get<any[]>('apipilot.environments', []);
-
-                        const index = environments.findIndex((e) => e.id === updatedEnv.id);
-                        if (index !== -1) {
-                            environments[index] = updatedEnv;
-                        } else {
-                            environments.push(updatedEnv);
-                        }
-
-                        await this._context.globalState.update('apipilot.environments', environments);
-
-                        // Small delay to ensure state is propagated
-                        setTimeout(() => {
-                            vscode.commands.executeCommand('apipilot.refreshSidebar');
-                            SettingsPanel.currentPanel?.refresh();
-                        }, 100);
-
-                        this._panel.webview.postMessage({ type: 'onInfo', value: 'Environment saved' });
+                    case 'close': {
+                        this.dispose();
                         break;
                     }
-                    case 'getSettings': {
-                        const settings: any = this._context.globalState.get('apipilot.settings', {});
-                        if (!settings.general) settings.general = {};
-                        if (settings.general.autoSave === undefined) settings.general.autoSave = true;
-
+                    case 'getCollections': {
+                        const collections = this._context.globalState.get('apipilot.collections', []);
                         this._panel.webview.postMessage({
-                            type: 'updateSettings',
-                            payload: settings
+                            type: 'updateCollections',
+                            payload: collections
                         });
+                        break;
+                    }
+                    case 'importData': {
+                        try {
+                            const { collectionId, newCollectionName, content } = message.payload;
+                            const importedItems = Importer.parse(content);
+
+                            const collections = this._context.globalState.get('apipilot.collections', []) as any[];
+                            let targetCollection: any;
+
+                            if (newCollectionName) {
+                                targetCollection = {
+                                    id: Date.now().toString(),
+                                    name: newCollectionName,
+                                    type: 'folder',
+                                    children: []
+                                };
+                                collections.push(targetCollection);
+                            } else {
+                                targetCollection = collections.find((c: any) => c.id === collectionId);
+                            }
+
+                            if (targetCollection) {
+                                if (!targetCollection.children) {
+                                    targetCollection.children = [];
+                                }
+                                targetCollection.children.push(...importedItems);
+
+                                await this._context.globalState.update('apipilot.collections', collections);
+
+                                this._panel.webview.postMessage({
+                                    type: 'importSuccess'
+                                });
+
+                                // Notify Sidebar to refresh
+                                vscode.commands.executeCommand('apipilot.refreshSidebar');
+                            } else {
+                                throw new Error('Target collection not found');
+                            }
+                        } catch (e: any) {
+                            Logger.error(`Import failed: ${e.message}`);
+                            this._panel.webview.postMessage({
+                                type: 'importError',
+                                message: e.message
+                            });
+                        }
                         break;
                     }
                 }
@@ -111,9 +124,7 @@ export class EnvironmentPanel {
     }
 
     public dispose() {
-        if (this._environmentId) {
-            EnvironmentPanel.currentPanels.delete(this._environmentId);
-        }
+        ImportPanel.currentPanel = undefined;
         this._panel.dispose();
         while (this._disposables.length) {
             const x = this._disposables.pop();
@@ -123,7 +134,7 @@ export class EnvironmentPanel {
         }
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview, initialData?: any) {
+    private _getHtmlForWebview(webview: vscode.Webview) {
         const isDev = this._context.extensionMode === vscode.ExtensionMode.Development;
 
         let scriptUri = '';
@@ -143,8 +154,6 @@ export class EnvironmentPanel {
 
         const nonce = getNonce();
 
-        const initialDataScript = initialData ? `window.initialData = ${JSON.stringify(initialData)};` : '';
-
         const csp = isDev
             ? `default-src 'none'; connect-src ${webview.cspSource} https: http://localhost:5173 ws://localhost:5173 data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' http://localhost:5173; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' http://localhost:5173; font-src ${webview.cspSource} https: data:;`
             : `default-src 'none'; connect-src ${webview.cspSource} https: data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval'; font-src ${webview.cspSource} https: data:;`;
@@ -156,10 +165,9 @@ export class EnvironmentPanel {
 				<meta http-equiv="Content-Security-Policy" content="${csp}">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 				${!isDev ? `<link href="${styleResetUri}" rel="stylesheet">` : ''}
-				<title>ApiPilot Environment</title>
+				<title>ApiPilot Import</title>
                 <script nonce="${nonce}">
-                    window.viewType = 'environment-editor';
-                    ${initialDataScript}
+                    window.viewType = 'import';
                 </script>
                  <script nonce="${nonce}">
                     // Acquire API once and store globally

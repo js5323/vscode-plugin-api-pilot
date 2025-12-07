@@ -3,7 +3,10 @@ import { RequestHandler } from './RequestHandler';
 import { RequestPanel } from './RequestPanel';
 import { ExamplePanel } from './ExamplePanel';
 import { EnvironmentPanel } from './EnvironmentPanel';
+import { ImportPanel } from './ImportPanel';
+import { SettingsPanel } from './SettingsPanel';
 import { Logger } from './utils/Logger';
+import { Importer } from './utils/Importer';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
@@ -39,9 +42,32 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     try {
                         Logger.log(`Executing request: ${JSON.stringify(data.payload)}`);
                         const response = await RequestHandler.makeRequest(data.payload);
+
+                        // Save to history
+                        const history = this._context.globalState.get('apipilot.history', []) as any[];
+                        const historyItem = {
+                            ...data.payload,
+                            id: Date.now().toString(), // New ID for history item
+                            response: {
+                                status: response.status,
+                                statusText: response.statusText,
+                                time: Date.now(),
+                                size: response.size
+                            },
+                            timestamp: Date.now()
+                        };
+                        history.unshift(historyItem); // Add to top
+                        if (history.length > 50) history.pop(); // Limit history size
+                        await this._context.globalState.update('apipilot.history', history);
+
                         webviewView.webview.postMessage({
                             type: 'executeResponse',
                             payload: response
+                        });
+
+                        webviewView.webview.postMessage({
+                            type: 'updateHistory',
+                            payload: history
                         });
                     } catch (error) {
                         Logger.error(`Error executing request: ${error}`);
@@ -50,6 +76,26 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             payload: { error: String(error) }
                         });
                     }
+                    break;
+                }
+                case 'openSettings': {
+                    SettingsPanel.createOrShow(this._context);
+                    break;
+                }
+                case 'getHistory': {
+                    const history = this._context.globalState.get('apipilot.history', []);
+                    webviewView.webview.postMessage({
+                        type: 'updateHistory',
+                        payload: history
+                    });
+                    break;
+                }
+                case 'clearHistory': {
+                    await this._context.globalState.update('apipilot.history', []);
+                    webviewView.webview.postMessage({
+                        type: 'updateHistory',
+                        payload: []
+                    });
                     break;
                 }
                 case 'parseCurl': {
@@ -105,6 +151,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     EnvironmentPanel.createOrShow(this._context, data.payload);
                     break;
                 }
+                case 'openImport': {
+                    ImportPanel.createOrShow(this._context);
+                    break;
+                }
                 case 'log': {
                     Logger.log(`Log from Webview: ${data.value}`);
                     break;
@@ -131,6 +181,55 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 }
                 case 'saveEnvironments': {
                     await this._context.globalState.update('apipilot.environments', data.payload);
+                    break;
+                }
+                case 'importData': {
+                    try {
+                        const { collectionId, newCollectionName, content } = data.payload;
+                        const importedItems = Importer.parse(content);
+
+                        const collections = this._context.globalState.get('apipilot.collections', []) as any[];
+                        let targetCollection: any;
+
+                        if (newCollectionName) {
+                            targetCollection = {
+                                id: Date.now().toString(),
+                                name: newCollectionName,
+                                type: 'folder',
+                                children: []
+                            };
+                            collections.push(targetCollection);
+                        } else {
+                            targetCollection = collections.find((c: any) => c.id === collectionId);
+                        }
+
+                        if (targetCollection) {
+                            if (!targetCollection.children) {
+                                targetCollection.children = [];
+                            }
+                            targetCollection.children.push(...importedItems);
+
+                            await this._context.globalState.update('apipilot.collections', collections);
+
+                            webviewView.webview.postMessage({
+                                type: 'importSuccess'
+                            });
+
+                            // Also update the collections view
+                            webviewView.webview.postMessage({
+                                type: 'updateCollections',
+                                payload: collections
+                            });
+                        } else {
+                            throw new Error('Target collection not found');
+                        }
+                    } catch (e: any) {
+                        Logger.error(`Import failed: ${e.message}`);
+                        webviewView.webview.postMessage({
+                            type: 'importError',
+                            message: e.message
+                        });
+                    }
                     break;
                 }
             }

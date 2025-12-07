@@ -9,7 +9,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions
+    DialogActions,
+    CircularProgress
 } from '@mui/material';
 import FolderItem from './FolderItem';
 import RequestItem from './RequestItem';
@@ -22,6 +23,7 @@ const vscode = getVsCodeApi();
 export default function CollectionsTab() {
     const [searchTerm, setSearchTerm] = useState('');
     const [collections, setCollections] = useState<CollectionItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [filteredCollections, setFilteredCollections] = useState<CollectionItem[]>([]);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export default function CollectionsTab() {
             const message = event.data;
             if (message.type === 'updateCollections') {
                 setCollections(message.payload || []);
+                setIsLoading(false);
             }
         };
 
@@ -333,7 +336,11 @@ export default function CollectionsTab() {
                 onAction={handleCreateCollection}
             />
             <Box sx={{ flexGrow: 1, overflow: 'auto', px: 0.5 }}>
-                {collections.length === 0 ? (
+                {isLoading ? (
+                    <Stack alignItems="center" justifyContent="center" sx={{ height: '100%' }}>
+                        <CircularProgress />
+                    </Stack>
+                ) : collections.length === 0 ? (
                     <Stack
                         alignItems="center"
                         justifyContent="center"

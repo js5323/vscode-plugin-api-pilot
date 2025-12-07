@@ -146,6 +146,8 @@ export class RequestPanel {
                         if (found) {
                             await this._context.globalState.update('apipilot.collections', collections);
                             vscode.commands.executeCommand('apipilot.refreshSidebar');
+                            // If not auto-saving (or if we want to give feedback), show info.
+                            // But usually auto-save is silent. We can send a 'saved' message back if needed.
                             this._panel.webview.postMessage({ type: 'onInfo', value: 'Request saved' });
                         } else {
                             this._panel.webview.postMessage({
@@ -153,6 +155,17 @@ export class RequestPanel {
                                 value: 'Could not find request to save'
                             });
                         }
+                        break;
+                    }
+                    case 'getSettings': {
+                        const settings: any = this._context.globalState.get('apipilot.settings', {});
+                        if (!settings.general) settings.general = {};
+                        if (settings.general.autoSave === undefined) settings.general.autoSave = true;
+
+                        this._panel.webview.postMessage({
+                            type: 'updateSettings',
+                            payload: settings
+                        });
                         break;
                     }
                 }

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SidebarProvider } from './SidebarProvider';
 import { RequestPanel } from './RequestPanel';
+import { EnvironmentPanel } from './EnvironmentPanel';
 import { Logger } from './utils/Logger';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -20,6 +21,12 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('apipilot.createRequest', () => {
             RequestPanel.createOrShow(context);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('apipilot.openEnvironment', (environment) => {
+            EnvironmentPanel.createOrShow(context, environment);
         })
     );
 

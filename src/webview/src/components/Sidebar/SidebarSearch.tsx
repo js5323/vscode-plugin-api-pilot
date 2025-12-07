@@ -8,7 +8,7 @@ interface SidebarSearchProps {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     onAction?: () => void;
-    ActionIcon?: OverridableComponent<SvgIconTypeMap<{}, 'svg'>> & { muiName: string };
+    ActionIcon?: OverridableComponent<SvgIconTypeMap<object, 'svg'>> & { muiName: string };
 }
 
 export default function SidebarSearch({

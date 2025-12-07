@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Tabs, Tab, Typography, Tooltip, IconButton } from '@mui/material';
+import { Box, Tabs, Tab, Tooltip, IconButton } from '@mui/material';
 import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
 import HorizontalSplitIcon from '@mui/icons-material/HorizontalSplit';
 import Editor from '@monaco-editor/react';
@@ -60,9 +60,9 @@ export default function RequestConfig({ request, onChange, layout, onLayoutChang
                 return !!request.description;
             case 1: // Params
                 return request.queryParams && request.queryParams.some((p) => p.isEnabled && p.key);
-            case 3: // Headers
+            case 2: // Headers
                 return request.headers && request.headers.some((h) => h.isEnabled && h.key);
-            case 4: // Body
+            case 3: // Body
                 if (!request.body || request.body.type === 'none') return false;
                 if (request.body.type === 'raw') return !!request.body.raw;
                 if (request.body.type === 'form-data')
@@ -112,12 +112,8 @@ export default function RequestConfig({ request, onChange, layout, onLayoutChang
                 >
                     {renderTab('Docs', 0)}
                     {renderTab('Params', 1)}
-                    {renderTab('Authorization', 2)}
-                    {renderTab('Headers', 3)}
-                    {renderTab('Body', 4)}
-                    {renderTab('Scripts', 5)}
-                    {renderTab('Tests', 6)}
-                    {renderTab('Settings', 7)}
+                    {renderTab('Headers', 2)}
+                    {renderTab('Body', 3)}
                 </Tabs>
                 <Tooltip title={`Switch to ${layout === 'vertical' ? 'Horizontal' : 'Vertical'} Layout`}>
                     <IconButton onClick={onLayoutChange} size="small" sx={{ mr: 1 }}>
@@ -159,9 +155,6 @@ export default function RequestConfig({ request, onChange, layout, onLayoutChang
                     />
                 </CustomTabPanel>
                 <CustomTabPanel value={tabValue} index={2}>
-                    <Typography color="text.secondary">Authorization (Coming Soon)</Typography>
-                </CustomTabPanel>
-                <CustomTabPanel value={tabValue} index={3}>
                     <KeyValueTable
                         items={request.headers || []}
                         onChange={handleHeadersChange}
@@ -169,17 +162,8 @@ export default function RequestConfig({ request, onChange, layout, onLayoutChang
                         enablePresets={true}
                     />
                 </CustomTabPanel>
-                <CustomTabPanel value={tabValue} index={4}>
+                <CustomTabPanel value={tabValue} index={3}>
                     <BodyEditor body={request.body || { type: 'none' }} onChange={handleBodyChange} />
-                </CustomTabPanel>
-                <CustomTabPanel value={tabValue} index={5}>
-                    <Typography color="text.secondary">Scripts (Coming Soon)</Typography>
-                </CustomTabPanel>
-                <CustomTabPanel value={tabValue} index={6}>
-                    <Typography color="text.secondary">Tests (Coming Soon)</Typography>
-                </CustomTabPanel>
-                <CustomTabPanel value={tabValue} index={7}>
-                    <Typography color="text.secondary">Settings (Coming Soon)</Typography>
                 </CustomTabPanel>
             </Box>
         </Box>

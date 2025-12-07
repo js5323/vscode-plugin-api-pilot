@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Paper, TextField, Button, Select, MenuItem, FormControl } from '@mui/material';
+import { Box, Paper, TextField, Button, Select, MenuItem, FormControl, Tooltip, IconButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveIcon from '@mui/icons-material/Save';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { getVsCodeApi } from '../utils/vscode';
 import { ApiRequest, ApiRequestBody } from '../types';
 import RequestConfig from '../components/RequestEditor/RequestConfig';
@@ -58,6 +59,7 @@ const migrateRequest = (data: any): ApiRequest => {
     if (!newData.queryParams) newData.queryParams = [];
     if (!newData.headers) newData.headers = [];
     if (!newData.body) newData.body = { type: 'none' };
+    if (!newData.responseHistory) newData.responseHistory = [];
 
     return newData as ApiRequest;
 };
@@ -71,6 +73,8 @@ export default function RequestEditor() {
     const [splitPos, setSplitPos] = useState(50); // percentage
     const containerRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
+    const [settings, setSettings] = useState<any>({ general: { autoSave: true } });
+    const [responseHistory, setResponseHistory] = useState<any[]>(initialData?.responseHistory || []);
 
     const handleMouseDown = () => {
         isDragging.current = true;
@@ -110,13 +114,22 @@ export default function RequestEditor() {
     };
 
     useEffect(() => {
+        vscode.postMessage({ type: 'getSettings' });
+
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message.type === 'executeResponse') {
-                setResponse(message.payload);
+                const newResponse = message.payload;
+                setResponse(newResponse);
                 setLoading(false);
+                setResponseHistory((prev) => {
+                    const newHistory = [{ ...newResponse, timestamp: Date.now() }, ...prev];
+                    return newHistory.slice(0, 10);
+                });
             } else if (message.type === 'updateRequest') {
                 setRequest(migrateRequest(message.payload));
+            } else if (message.type === 'updateSettings') {
+                setSettings(message.payload);
             } else if (message.type === 'fileSelected') {
                 const context = message.context;
                 if (context && context.type === 'formData' && context.rowId) {
@@ -150,6 +163,16 @@ export default function RequestEditor() {
         return () => window.removeEventListener('message', handleMessage);
     }, []);
 
+    // Auto Save
+    useEffect(() => {
+        if (settings.general?.autoSave) {
+            const timer = setTimeout(() => {
+                vscode.postMessage({ type: 'saveRequest', payload: { ...request, responseHistory } });
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [request, settings, responseHistory]);
+
     const handleSend = () => {
         setResponse(null);
         setLoading(true);
@@ -157,7 +180,7 @@ export default function RequestEditor() {
     };
 
     const handleSave = () => {
-        vscode.postMessage({ type: 'saveRequest', payload: request });
+        vscode.postMessage({ type: 'saveRequest', payload: { ...request, responseHistory } });
     };
 
     const handleChange = (field: keyof ApiRequest, value: any) => {
@@ -188,6 +211,11 @@ export default function RequestEditor() {
                     value={request.url}
                     onChange={(e) => handleChange('url', e.target.value)}
                 />
+                <Tooltip title="Use {{variable}} to reference environment variables (e.g. use {{var1}} for var1 in active env1)">
+                    <IconButton size="small">
+                        <HelpOutlineIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
                 <Button
                     variant="contained"
                     size="medium"
@@ -198,15 +226,17 @@ export default function RequestEditor() {
                 >
                     Send
                 </Button>
-                <Button
-                    size="medium"
-                    sx={{ padding: '8px 16px' }}
-                    variant="outlined"
-                    startIcon={<SaveIcon />}
-                    onClick={handleSave}
-                >
-                    Save
-                </Button>
+                {!settings.general?.autoSave && (
+                    <Button
+                        size="medium"
+                        sx={{ padding: '8px 16px' }}
+                        variant="outlined"
+                        startIcon={<SaveIcon />}
+                        onClick={handleSave}
+                    >
+                        Save
+                    </Button>
+                )}
             </Paper>
 
             {/* Main Content Area */}
@@ -259,7 +289,12 @@ export default function RequestEditor() {
                         overflow: 'hidden'
                     }}
                 >
-                    <ResponseViewer response={response} loading={loading} />
+                    <ResponseViewer
+                        response={response}
+                        loading={loading}
+                        history={responseHistory}
+                        onSelectHistory={(item) => setResponse(item)}
+                    />
                 </Box>
             </Box>
         </Box>

@@ -73,7 +73,7 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                 onChange({ ...body, raw: formatted });
             }
         } catch (e) {
-            // console.error(e);
+            console.error(e);
         }
     };
 
