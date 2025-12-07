@@ -22,17 +22,17 @@ export interface ApiResponse {
 export class RequestHandler {
     static async makeRequest(request: ApiRequest, variables: any[] = []): Promise<ApiResponse> {
         const startTime = Date.now();
-        
+
         // Helper for substitution
         const envMap: Record<string, string> = {};
         if (Array.isArray(variables)) {
-            variables.forEach(v => {
+            variables.forEach((v) => {
                 if (v.isEnabled && v.key) {
                     envMap[v.key] = v.value;
                 }
             });
         }
-        
+
         const substitute = (str: string): string => {
             if (!str) return str;
             return str.replace(/\{\{(.+?)\}\}/g, (_, key) => {
@@ -46,7 +46,7 @@ export class RequestHandler {
         // 1. Process Params
         const params: Record<string, string> = {};
         if (Array.isArray(request.queryParams)) {
-            request.queryParams.forEach(p => {
+            request.queryParams.forEach((p) => {
                 if (p.isEnabled && p.key) {
                     params[substitute(p.key)] = substitute(p.value);
                 }
@@ -56,7 +56,7 @@ export class RequestHandler {
         // 2. Process Headers
         const headers: Record<string, string> = {};
         if (Array.isArray(request.headers)) {
-            request.headers.forEach(h => {
+            request.headers.forEach((h) => {
                 if (h.isEnabled && h.key) {
                     headers[substitute(h.key)] = substitute(h.value);
                 }
@@ -73,9 +73,9 @@ export class RequestHandler {
                 const urlParams = new URLSearchParams();
                 if (Array.isArray(request.body.urlencoded)) {
                     request.body.urlencoded.forEach((p: any) => {
-                         if (p.isEnabled && p.key) {
+                        if (p.isEnabled && p.key) {
                             urlParams.append(substitute(p.key), substitute(p.value));
-                         }
+                        }
                     });
                 }
                 data = urlParams.toString();
@@ -87,17 +87,19 @@ export class RequestHandler {
                 const formData: Record<string, any> = {};
                 if (Array.isArray(request.body.formData)) {
                     request.body.formData.forEach((p: any) => {
-                         if (p.isEnabled && p.key) {
+                        if (p.isEnabled && p.key) {
                             formData[substitute(p.key)] = substitute(p.value);
-                         }
+                        }
                     });
                 }
-                data = formData; 
+                data = formData;
             } else if (bodyType === 'graphql') {
-                 data = {
-                     query: substitute(request.body.graphql?.query || ''),
-                     variables: request.body.graphql?.variables ? JSON.parse(substitute(request.body.graphql.variables || '{}')) : {}
-                 };
+                data = {
+                    query: substitute(request.body.graphql?.query || ''),
+                    variables: request.body.graphql?.variables
+                        ? JSON.parse(substitute(request.body.graphql.variables || '{}'))
+                        : {}
+                };
             }
         }
 
@@ -108,24 +110,26 @@ export class RequestHandler {
             headers: headers,
             data: data,
             validateStatus: () => true, // Don't throw on error status
-            transformResponse: [data => {
-                try {
-                    // Try to parse JSON response
-                    if (typeof data === 'string') {
-                        return JSON.parse(data);
+            transformResponse: [
+                (data) => {
+                    try {
+                        // Try to parse JSON response
+                        if (typeof data === 'string') {
+                            return JSON.parse(data);
+                        }
+                        return data;
+                    } catch {
+                        return data;
                     }
-                    return data;
-                } catch {
-                    return data;
                 }
-            }]
+            ]
         };
 
         try {
             const response: AxiosResponse = await axios(config);
             const endTime = Date.now();
             const duration = endTime - startTime;
-            
+
             // Calculate approximate size
             const size = JSON.stringify(response.data).length + JSON.stringify(response.headers).length;
 
@@ -138,8 +142,8 @@ export class RequestHandler {
                 size
             };
         } catch (error: any) {
-             const endTime = Date.now();
-             return {
+            const endTime = Date.now();
+            return {
                 status: 0,
                 statusText: 'Error',
                 data: error.message || 'Unknown Error',

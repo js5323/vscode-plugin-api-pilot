@@ -1,5 +1,23 @@
 import { useState } from 'react';
-import { ListItem, ListItemButton, ListItemText, Collapse, Box, List, IconButton, Menu, MenuItem, Divider, ListItemIcon, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
+import {
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    Collapse,
+    Box,
+    List,
+    IconButton,
+    Menu,
+    MenuItem,
+    Divider,
+    ListItemIcon,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    TextField,
+    DialogActions,
+    Button
+} from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -34,13 +52,28 @@ interface FolderItemProps {
     onDuplicateExample?: (exampleId: string, requestId: string) => void;
 }
 
-export default function FolderItem({ folder, onDelete, onAddRequest, onAddFolder, onRename, onDuplicate, onRun, onShare, onAddExample, onOpenRequest, onOpenExample, onDeleteExample, onRenameExample, onDuplicateExample }: FolderItemProps) {
+export default function FolderItem({
+    folder,
+    onDelete,
+    onAddRequest,
+    onAddFolder,
+    onRename,
+    onDuplicate,
+    onRun,
+    onShare,
+    onAddExample,
+    onOpenRequest,
+    onOpenExample,
+    onDeleteExample,
+    onRenameExample,
+    onDuplicateExample
+}: FolderItemProps) {
     const [open, setOpen] = useState(false);
     const [hover, setHover] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [renameDialogOpen, setRenameDialogOpen] = useState(false);
     const [newName, setNewName] = useState(folder.name);
-    
+
     const menuOpen = Boolean(anchorEl);
 
     const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -111,27 +144,35 @@ export default function FolderItem({ folder, onDelete, onAddRequest, onAddFolder
 
     return (
         <>
-            <ListItemButton 
-                onClick={() => setOpen(!open)} 
+            <ListItemButton
+                onClick={() => setOpen(!open)}
                 sx={{ py: 0.5 }}
                 onMouseEnter={() => setHover(true)}
                 onMouseLeave={() => setHover(false)}
             >
-                {open ? <ExpandLess sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} /> : <ExpandMore sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />}
-                {open ? <FolderOpenIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} /> : <FolderIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} />}
+                {open ? (
+                    <ExpandLess sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                ) : (
+                    <ExpandMore sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                )}
+                {open ? (
+                    <FolderOpenIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} />
+                ) : (
+                    <FolderIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} />
+                )}
                 <ListItemText primary={folder.name} primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }} />
-                
+
                 {(hover || menuOpen) && (
                     <Box sx={{ display: 'flex' }}>
-                         <IconButton 
-                            size="small" 
+                        <IconButton
+                            size="small"
                             onClick={handleAddRequest}
                             sx={{ p: 0.5, color: 'text.secondary', '&:hover': { color: 'text.primary' } }}
                         >
                             <AddIcon fontSize="small" sx={{ fontSize: 16 }} />
                         </IconButton>
-                        <IconButton 
-                            size="small" 
+                        <IconButton
+                            size="small"
                             onClick={handleMenuClick}
                             sx={{ p: 0.5, color: 'text.secondary', '&:hover': { color: 'text.primary' } }}
                         >
@@ -139,7 +180,7 @@ export default function FolderItem({ folder, onDelete, onAddRequest, onAddFolder
                         </IconButton>
                     </Box>
                 )}
-                
+
                 <Menu
                     anchorEl={anchorEl}
                     open={menuOpen}
@@ -147,7 +188,7 @@ export default function FolderItem({ folder, onDelete, onAddRequest, onAddFolder
                     onClick={(e) => e.stopPropagation()}
                     PaperProps={{
                         elevation: 3,
-                        sx: { 
+                        sx: {
                             minWidth: 140,
                             padding: '4px 0',
                             '& .MuiMenuItem-root': {
@@ -158,44 +199,74 @@ export default function FolderItem({ folder, onDelete, onAddRequest, onAddFolder
                         }
                     }}
                 >
-                    <MenuItem onClick={(e) => { handleAddRequest(e); }}>
-                        <ListItemIcon sx={{ minWidth: 30 }}><AddIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                    <MenuItem
+                        onClick={(e) => {
+                            handleAddRequest(e);
+                        }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <AddIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Add request</ListItemText>
                     </MenuItem>
-                    <MenuItem onClick={(e) => { handleAddFolder(e); }}>
-                        <ListItemIcon sx={{ minWidth: 30 }}><FolderIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                    <MenuItem
+                        onClick={(e) => {
+                            handleAddFolder(e);
+                        }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <FolderIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Add folder</ListItemText>
                     </MenuItem>
                     <Divider sx={{ my: 0.5 }} />
                     <MenuItem onClick={handleRun}>
-                        <ListItemIcon sx={{ minWidth: 30 }}><PlayArrowIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <PlayArrowIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Run</ListItemText>
                     </MenuItem>
                     <Divider sx={{ my: 0.5 }} />
                     <MenuItem onClick={handleShare}>
-                        <ListItemIcon sx={{ minWidth: 30 }}><ShareIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <ShareIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Share</ListItemText>
                     </MenuItem>
                     <Divider sx={{ my: 0.5 }} />
-                     <MenuItem onClick={handleRenameOpen}>
-                        <ListItemIcon sx={{ minWidth: 30 }}><EditIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                    <MenuItem onClick={handleRenameOpen}>
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <EditIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Rename</ListItemText>
                     </MenuItem>
                     <MenuItem onClick={handleDuplicate}>
-                        <ListItemIcon sx={{ minWidth: 30 }}><ContentCopyIcon fontSize="small" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <ContentCopyIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Duplicate</ListItemText>
                     </MenuItem>
-                    <MenuItem onClick={(e) => { 
-                        if (onDelete) onDelete(folder.id); 
-                        handleMenuClose(e); 
-                    }}>
-                        <ListItemIcon sx={{ minWidth: 30 }}><DeleteIcon fontSize="small" color="error" sx={{ fontSize: '1.2rem' }} /></ListItemIcon>
-                        <ListItemText sx={{ color: 'error.main' }} primaryTypographyProps={{ fontSize: '0.75rem' }}>Delete</ListItemText>
+                    <MenuItem
+                        onClick={(e) => {
+                            if (onDelete) onDelete(folder.id);
+                            handleMenuClose(e);
+                        }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <DeleteIcon fontSize="small" color="error" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
+                        <ListItemText sx={{ color: 'error.main' }} primaryTypographyProps={{ fontSize: '0.75rem' }}>
+                            Delete
+                        </ListItemText>
                     </MenuItem>
                 </Menu>
             </ListItemButton>
-            
-            <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)} onClick={(e) => e.stopPropagation()}>
+
+            <Dialog
+                open={renameDialogOpen}
+                onClose={() => setRenameDialogOpen(false)}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <DialogTitle>Rename Folder</DialogTitle>
                 <DialogContent>
                     <TextField
@@ -228,11 +299,11 @@ export default function FolderItem({ folder, onDelete, onAddRequest, onAddFolder
                             folder.children.map((child) => {
                                 if (child.type === 'folder') {
                                     return (
-                                        <FolderItem 
-                                            key={child.id} 
-                                            folder={child as CollectionFolder} 
-                                            onDelete={onDelete} 
-                                            onAddRequest={onAddRequest} 
+                                        <FolderItem
+                                            key={child.id}
+                                            folder={child as CollectionFolder}
+                                            onDelete={onDelete}
+                                            onAddRequest={onAddRequest}
                                             onAddFolder={onAddFolder}
                                             onRename={onRename}
                                             onDuplicate={onDuplicate}
@@ -248,13 +319,13 @@ export default function FolderItem({ folder, onDelete, onAddRequest, onAddFolder
                                     );
                                 }
                                 return (
-                                    <RequestItem 
-                                        key={child.id} 
-                                        request={child as ApiRequest} 
+                                    <RequestItem
+                                        key={child.id}
+                                        request={child as ApiRequest}
                                         onClick={() => {
                                             if (onOpenRequest) onOpenRequest(child as ApiRequest);
                                             else vscode.postMessage({ type: 'openRequest', payload: child });
-                                        }} 
+                                        }}
                                         onDelete={onDelete}
                                         onRename={onRename}
                                         onDuplicate={onDuplicate}
@@ -269,8 +340,8 @@ export default function FolderItem({ folder, onDelete, onAddRequest, onAddFolder
                             })
                         ) : (
                             <ListItem>
-                                <ListItemText 
-                                    secondary="Empty" 
+                                <ListItemText
+                                    secondary="Empty"
                                     secondaryTypographyProps={{ fontSize: '0.75rem', fontStyle: 'italic', pl: 2 }}
                                 />
                             </ListItem>

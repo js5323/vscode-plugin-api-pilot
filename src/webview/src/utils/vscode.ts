@@ -1,4 +1,3 @@
-
 export const getVsCodeApi = () => {
     if ((window as any).vscode) {
         return (window as any).vscode;

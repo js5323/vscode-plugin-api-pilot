@@ -48,7 +48,7 @@ export default function EnvironmentsTab() {
         // Confirm delete? Ideally yes, but adhering to minimal changes for now unless requested.
         // User requested delete confirmation for collections, probably good here too but not explicitly asked for this specific tab in this turn.
         // I'll stick to simple delete for now to match previous behavior minus dialog.
-        const newEnvs = environments.filter(env => env.id !== id);
+        const newEnvs = environments.filter((env) => env.id !== id);
         saveEnvironments(newEnvs);
     };
 
@@ -58,30 +58,30 @@ export default function EnvironmentsTab() {
     };
 
     const handleActivateEnvironment = (id: string) => {
-        const newEnvs = environments.map(env => ({
+        const newEnvs = environments.map((env) => ({
             ...env,
             isActive: env.id === id
         }));
         saveEnvironments(newEnvs);
     };
 
-    const filteredEnvironments = environments.filter(env => 
+    const filteredEnvironments = environments.filter((env) =>
         env.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-             <SidebarSearch 
-                activeTab="environments" 
-                searchTerm={searchTerm} 
-                setSearchTerm={setSearchTerm} 
+            <SidebarSearch
+                activeTab="environments"
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
                 onAction={handleCreateEnvironment}
                 ActionIcon={AddIcon}
             />
             <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
                 <List dense>
-                    {filteredEnvironments.map(env => (
-                        <ListItem 
+                    {filteredEnvironments.map((env) => (
+                        <ListItem
                             key={env.id}
                             secondaryAction={
                                 <Box>
@@ -95,13 +95,13 @@ export default function EnvironmentsTab() {
                             }
                             disablePadding
                         >
-                            <Radio 
+                            <Radio
                                 checked={env.isActive}
                                 onChange={() => handleActivateEnvironment(env.id)}
                                 size="small"
                             />
-                            <ListItemText 
-                                primary={env.name} 
+                            <ListItemText
+                                primary={env.name}
                                 secondary={`${env.variables.length} variables`}
                                 onClick={() => handleEditEnvironment(env)}
                                 sx={{ cursor: 'pointer' }}
@@ -109,9 +109,7 @@ export default function EnvironmentsTab() {
                         </ListItem>
                     ))}
                     {filteredEnvironments.length === 0 && (
-                        <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                            No environments found.
-                        </Box>
+                        <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>No environments found.</Box>
                     )}
                 </List>
             </Box>

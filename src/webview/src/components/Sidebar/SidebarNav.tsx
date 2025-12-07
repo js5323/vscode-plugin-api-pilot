@@ -12,29 +12,31 @@ interface NavRailItemProps {
 
 function NavRailItem({ icon, label, active, onClick }: NavRailItemProps) {
     return (
-        <ListItemButton 
+        <ListItemButton
             onClick={onClick}
-            sx={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
+            sx={{
+                flexDirection: 'row',
+                alignItems: 'center',
                 justifyContent: 'center',
                 py: 1.5,
                 flex: 1,
-                gap:  0.5,
+                gap: 0.5,
                 position: 'relative',
                 color: active ? 'primary.main' : 'text.secondary',
                 '&:hover': {
-                    backgroundColor: 'action.hover',
+                    backgroundColor: 'action.hover'
                 },
-                '&::before': active ? {
-                    content: '""',
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 2,
-                    backgroundColor: 'primary.main',
-                } : {}
+                '&::before': active
+                    ? {
+                          content: '""',
+                          position: 'absolute',
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: 2,
+                          backgroundColor: 'primary.main'
+                      }
+                    : {}
             }}
         >
             {icon}
@@ -52,35 +54,35 @@ interface SidebarNavProps {
 
 export default function SidebarNav({ activeTab, setActiveTab }: SidebarNavProps) {
     return (
-        <Paper 
-            elevation={0} 
-            sx={{ 
-                // width: 80, 
-                display: 'flex', 
-                flexDirection: 'row', 
-                // borderRight: 1, 
+        <Paper
+            elevation={0}
+            sx={{
+                // width: 80,
+                display: 'flex',
+                flexDirection: 'row',
+                // borderRight: 1,
                 borderColor: 'divider',
                 bgcolor: 'background.paper',
                 zIndex: 1
             }}
         >
-            <NavRailItem 
-                icon={<CollectionsBookmarkIcon fontSize="small" />} 
-                label="Collections" 
-                active={activeTab === 'collections'} 
-                onClick={() => setActiveTab('collections')} 
+            <NavRailItem
+                icon={<CollectionsBookmarkIcon fontSize="small" />}
+                label="Collections"
+                active={activeTab === 'collections'}
+                onClick={() => setActiveTab('collections')}
             />
-            <NavRailItem 
-                icon={<HistoryIcon fontSize="small" />} 
-                label="History" 
-                active={activeTab === 'history'} 
-                onClick={() => setActiveTab('history')} 
+            <NavRailItem
+                icon={<HistoryIcon fontSize="small" />}
+                label="History"
+                active={activeTab === 'history'}
+                onClick={() => setActiveTab('history')}
             />
-            <NavRailItem 
-                icon={<LayersIcon fontSize="small" />} 
-                label="Environments" 
-                active={activeTab === 'environments'} 
-                onClick={() => setActiveTab('environments')} 
+            <NavRailItem
+                icon={<LayersIcon fontSize="small" />}
+                label="Environments"
+                active={activeTab === 'environments'}
+                onClick={() => setActiveTab('environments')}
             />
         </Paper>
     );

@@ -98,6 +98,15 @@ export default function RequestEditor() {
                 setResponse(message.payload);
             } else if (message.type === 'updateRequest') {
                 setRequest(migrateRequest(message.payload));
+            } else if (message.type === 'fileSelected') {
+                setRequest((prev) => ({
+                    ...prev,
+                    body: {
+                        ...prev.body,
+                        type: 'binary',
+                        binary: message.payload
+                    } as ApiRequestBody
+                }));
             }
         };
         window.addEventListener('message', handleMessage);

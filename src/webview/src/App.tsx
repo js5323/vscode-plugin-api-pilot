@@ -7,17 +7,17 @@ import EnvironmentEditor from './pages/EnvironmentEditor';
 const viewType = (window as any).viewType || 'sidebar';
 
 function App() {
-  if (viewType === 'editor') {
-    return <RequestEditor />;
-  }
-  if (viewType === 'example-editor') {
-    return <ExampleEditor />;
-  }
-  if (viewType === 'environment-editor') {
-    return <EnvironmentEditor />;
-  }
-  
-  return <Sidebar />;
+    if (viewType === 'editor') {
+        return <RequestEditor />;
+    }
+    if (viewType === 'example-editor') {
+        return <ExampleEditor />;
+    }
+    if (viewType === 'environment-editor') {
+        return <EnvironmentEditor />;
+    }
+
+    return <Sidebar />;
 }
 
 export default App;

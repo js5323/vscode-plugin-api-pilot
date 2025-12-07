@@ -8,24 +8,23 @@ interface SidebarSearchProps {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     onAction?: () => void;
-    ActionIcon?: OverridableComponent<SvgIconTypeMap<{}, "svg">> & { muiName: string };
+    ActionIcon?: OverridableComponent<SvgIconTypeMap<{}, 'svg'>> & { muiName: string };
 }
 
-export default function SidebarSearch({ 
-    activeTab, 
-    searchTerm, 
-    setSearchTerm, 
-    onAction, 
-    ActionIcon = AddIcon 
+export default function SidebarSearch({
+    activeTab,
+    searchTerm,
+    setSearchTerm,
+    onAction,
+    ActionIcon = AddIcon
 }: SidebarSearchProps) {
-    
     return (
         <Stack direction="row" alignItems="center" sx={{ p: 1, gap: 0.5 }}>
-             {onAction && (
-                 <IconButton 
-                    size="small" 
+            {onAction && (
+                <IconButton
+                    size="small"
                     onClick={onAction}
-                    sx={{ 
+                    sx={{
                         p: 0.5,
                         color: 'text.secondary',
                         '&:hover': { color: 'text.primary', bgcolor: 'action.hover' }
@@ -33,10 +32,17 @@ export default function SidebarSearch({
                 >
                     <ActionIcon sx={{ fontSize: '1.1rem' }} />
                 </IconButton>
-             )}
+            )}
             <Paper
                 variant="outlined"
-                sx={{ p: '0px 2px', display: 'flex', alignItems: 'center', bgcolor: 'background.paper', flexGrow: 1, height: 28 }}
+                sx={{
+                    p: '0px 2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    bgcolor: 'background.paper',
+                    flexGrow: 1,
+                    height: 28
+                }}
             >
                 <IconButton sx={{ p: 0.5 }} aria-label="search" disabled>
                     <SearchIcon sx={{ fontSize: '1rem' }} />

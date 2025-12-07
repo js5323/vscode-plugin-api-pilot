@@ -34,7 +34,7 @@ export default function ExampleEditor() {
         if (parentRequest && example) {
             const requestToRun = {
                 ...parentRequest,
-                body: example.body, // Apply example body to request
+                body: example.body // Apply example body to request
             };
             vscode.postMessage({ type: 'openRequest', payload: requestToRun });
         }
@@ -50,18 +50,13 @@ export default function ExampleEditor() {
                 <Typography variant="h5" sx={{ mr: 2 }}>
                     {example.name}
                 </Typography>
-                <Chip 
-                    label={example.status} 
-                    color={example.status >= 200 && example.status < 300 ? 'success' : 'error'} 
+                <Chip
+                    label={example.status}
+                    color={example.status >= 200 && example.status < 300 ? 'success' : 'error'}
                     size="small"
                 />
                 <Box sx={{ flexGrow: 1 }} />
-                <Button 
-                    variant="contained" 
-                    startIcon={<PlayArrowIcon />}
-                    onClick={handleTry}
-                    disabled={!parentRequest}
-                >
+                <Button variant="contained" startIcon={<PlayArrowIcon />} onClick={handleTry} disabled={!parentRequest}>
                     Try
                 </Button>
             </Box>
@@ -73,13 +68,15 @@ export default function ExampleEditor() {
             )}
 
             <Paper sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
-                <Typography variant="subtitle1" gutterBottom>Response Body (Example)</Typography>
-                <Box 
-                    component="pre" 
-                    sx={{ 
-                        bgcolor: 'background.default', 
-                        p: 2, 
-                        borderRadius: 1, 
+                <Typography variant="subtitle1" gutterBottom>
+                    Response Body (Example)
+                </Typography>
+                <Box
+                    component="pre"
+                    sx={{
+                        bgcolor: 'background.default',
+                        p: 2,
+                        borderRadius: 1,
                         overflow: 'auto',
                         fontSize: '0.875rem',
                         fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace'

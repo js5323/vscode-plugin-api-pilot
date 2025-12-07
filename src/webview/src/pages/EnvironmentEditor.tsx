@@ -61,15 +61,17 @@ export default function EnvironmentEditor() {
     return (
         <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
             {/* Header */}
-            <Box sx={{ 
-                p: 2, 
-                borderBottom: 1, 
-                borderColor: 'divider',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                bgcolor: 'background.paper'
-            }}>
+            <Box
+                sx={{
+                    p: 2,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    bgcolor: 'background.paper'
+                }}
+            >
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
                     <Typography variant="h6" noWrap sx={{ maxWidth: 300 }}>
                         {environment.name || 'New Environment'}
@@ -80,8 +82,8 @@ export default function EnvironmentEditor() {
                         </Typography>
                     )}
                 </Stack>
-                <Button 
-                    variant="contained" 
+                <Button
+                    variant="contained"
                     startIcon={<SaveIcon />}
                     onClick={handleSave}
                     disabled={!isDirty}
@@ -102,15 +104,12 @@ export default function EnvironmentEditor() {
                             fullWidth
                             size="small"
                         />
-                        
+
                         <Box>
                             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                                 Variables
                             </Typography>
-                            <KeyValueTable
-                                items={environment.variables || []}
-                                onChange={handleVariablesChange}
-                            />
+                            <KeyValueTable items={environment.variables || []} onChange={handleVariablesChange} />
                         </Box>
                     </Stack>
                 </Paper>

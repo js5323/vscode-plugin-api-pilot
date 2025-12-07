@@ -206,25 +206,7 @@ export default function KeyValueTable({ items, onChange, title, enablePresets }:
                                 <TableCell padding="checkbox" sx={{ width: 40 }}></TableCell>
                                 <TableCell sx={{ width: '30%' }}>Key</TableCell>
                                 <TableCell sx={{ width: '30%' }}>Value</TableCell>
-                                <TableCell>
-                                    <Box
-                                        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                                    >
-                                        Description
-                                        <Button
-                                            size="small"
-                                            sx={{
-                                                textTransform: 'none',
-                                                color: 'text.secondary',
-                                                minWidth: 'auto',
-                                                p: 0.5,
-                                                fontSize: '0.75rem'
-                                            }}
-                                        >
-                                            ... Bulk Edit
-                                        </Button>
-                                    </Box>
-                                </TableCell>
+                                <TableCell>Description</TableCell>
                                 <TableCell padding="none" sx={{ width: 40 }}></TableCell>
                             </TableRow>
                         </TableHead>

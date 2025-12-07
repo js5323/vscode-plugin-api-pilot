@@ -1,9 +1,11 @@
 import React from 'react';
-import { 
-    Box, RadioGroup, FormControlLabel, Radio, Typography, TextField
-} from '@mui/material';
+import { Box, RadioGroup, FormControlLabel, Radio, Typography, TextField, Button } from '@mui/material';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import KeyValueTable from './KeyValueTable';
 import { ApiRequestBody, KeyValueItem } from '../../types';
+import { getVsCodeApi } from '../../utils/vscode';
+
+const vscode = getVsCodeApi();
 
 interface BodyEditorProps {
     body: ApiRequestBody;
@@ -27,20 +29,44 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
         onChange({ ...body, raw: value });
     };
 
+    const handleSelectFile = () => {
+        vscode.postMessage({ type: 'selectFile' });
+    };
+
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2, pb: 1 }}>
-                <RadioGroup
-                    row
-                    value={body.type}
-                    onChange={handleTypeChange}
-                >
-                    <FormControlLabel value="none" control={<Radio size="small" />} label={<Typography variant="body2">none</Typography>} />
-                    <FormControlLabel value="form-data" control={<Radio size="small" />} label={<Typography variant="body2">form-data</Typography>} />
-                    <FormControlLabel value="x-www-form-urlencoded" control={<Radio size="small" />} label={<Typography variant="body2">x-www-form-urlencoded</Typography>} />
-                    <FormControlLabel value="raw" control={<Radio size="small" />} label={<Typography variant="body2">raw</Typography>} />
-                    <FormControlLabel value="binary" control={<Radio size="small" />} label={<Typography variant="body2">binary</Typography>} />
-                    <FormControlLabel value="graphql" control={<Radio size="small" />} label={<Typography variant="body2">GraphQL</Typography>} />
+                <RadioGroup row value={body.type} onChange={handleTypeChange}>
+                    <FormControlLabel
+                        value="none"
+                        control={<Radio size="small" />}
+                        label={<Typography variant="body2">none</Typography>}
+                    />
+                    <FormControlLabel
+                        value="form-data"
+                        control={<Radio size="small" />}
+                        label={<Typography variant="body2">form-data</Typography>}
+                    />
+                    <FormControlLabel
+                        value="x-www-form-urlencoded"
+                        control={<Radio size="small" />}
+                        label={<Typography variant="body2">x-www-form-urlencoded</Typography>}
+                    />
+                    <FormControlLabel
+                        value="raw"
+                        control={<Radio size="small" />}
+                        label={<Typography variant="body2">raw</Typography>}
+                    />
+                    <FormControlLabel
+                        value="binary"
+                        control={<Radio size="small" />}
+                        label={<Typography variant="body2">binary</Typography>}
+                    />
+                    <FormControlLabel
+                        value="graphql"
+                        control={<Radio size="small" />}
+                        label={<Typography variant="body2">GraphQL</Typography>}
+                    />
                 </RadioGroup>
             </Box>
 
@@ -52,17 +78,11 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                 )}
 
                 {body.type === 'form-data' && (
-                    <KeyValueTable 
-                        items={body.formData || []} 
-                        onChange={handleFormDataChange} 
-                    />
+                    <KeyValueTable items={body.formData || []} onChange={handleFormDataChange} />
                 )}
 
                 {body.type === 'x-www-form-urlencoded' && (
-                    <KeyValueTable 
-                        items={body.urlencoded || []} 
-                        onChange={handleUrlEncodedChange} 
-                    />
+                    <KeyValueTable items={body.urlencoded || []} onChange={handleUrlEncodedChange} />
                 )}
 
                 {body.type === 'raw' && (
@@ -73,19 +93,28 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                         placeholder="Raw body content"
                         value={body.raw || ''}
                         onChange={(e) => handleRawChange(e.target.value)}
-                        sx={{ 
+                        sx={{
                             fontFamily: 'monospace',
-                            '& .MuiInputBase-root': { fontFamily: 'monospace' } 
+                            '& .MuiInputBase-root': { fontFamily: 'monospace' }
                         }}
                     />
                 )}
 
                 {body.type === 'binary' && (
-                     <Box sx={{ p: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                            Binary file upload is not yet supported in this preview.
-                        </Typography>
-                     </Box>
+                    <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                        <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={handleSelectFile}>
+                            Select File
+                        </Button>
+                        {body.binary ? (
+                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                Selected file: {body.binary}
+                            </Typography>
+                        ) : (
+                            <Typography variant="body2" color="text.secondary">
+                                No file selected
+                            </Typography>
+                        )}
+                    </Box>
                 )}
 
                 {body.type === 'graphql' && (
@@ -96,10 +125,16 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                             fullWidth
                             minRows={6}
                             value={body.graphql?.query || ''}
-                            onChange={(e) => onChange({ 
-                                ...body, 
-                                graphql: { ...body.graphql, query: e.target.value, variables: body.graphql?.variables || '' } 
-                            })}
+                            onChange={(e) =>
+                                onChange({
+                                    ...body,
+                                    graphql: {
+                                        ...body.graphql,
+                                        query: e.target.value,
+                                        variables: body.graphql?.variables || ''
+                                    }
+                                })
+                            }
                             sx={{ fontFamily: 'monospace' }}
                         />
                         <Typography variant="subtitle2">Variables</Typography>
@@ -108,10 +143,16 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                             fullWidth
                             minRows={4}
                             value={body.graphql?.variables || ''}
-                            onChange={(e) => onChange({ 
-                                ...body, 
-                                graphql: { ...body.graphql, query: body.graphql?.query || '', variables: e.target.value } 
-                            })}
+                            onChange={(e) =>
+                                onChange({
+                                    ...body,
+                                    graphql: {
+                                        ...body.graphql,
+                                        query: body.graphql?.query || '',
+                                        variables: e.target.value
+                                    }
+                                })
+                            }
                             sx={{ fontFamily: 'monospace' }}
                         />
                     </Box>
