@@ -83,6 +83,7 @@ export class RequestPanel {
                         break;
                     }
                     case 'selectFile': {
+                        const context = message.context;
                         const options: vscode.OpenDialogOptions = {
                             canSelectMany: false,
                             openLabel: 'Select',
@@ -94,7 +95,8 @@ export class RequestPanel {
                             if (fileUri && fileUri[0]) {
                                 this._panel.webview.postMessage({
                                     type: 'fileSelected',
-                                    payload: fileUri[0].fsPath
+                                    payload: fileUri[0].fsPath,
+                                    context: context
                                 });
                             }
                         });

@@ -4,6 +4,7 @@ export interface KeyValueItem {
     id: string;
     key: string;
     value: string;
+    type?: 'text' | 'file';
     description?: string;
     isEnabled: boolean;
 }
@@ -11,6 +12,7 @@ export interface KeyValueItem {
 export interface ApiRequestBody {
     type: 'none' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary' | 'graphql';
     raw?: string;
+    rawType?: 'Text' | 'JavaScript' | 'JSON' | 'HTML' | 'XML';
     formData?: KeyValueItem[];
     urlencoded?: KeyValueItem[];
     binary?: string;

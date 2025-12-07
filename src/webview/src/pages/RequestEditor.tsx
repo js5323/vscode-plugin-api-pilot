@@ -99,14 +99,32 @@ export default function RequestEditor() {
             } else if (message.type === 'updateRequest') {
                 setRequest(migrateRequest(message.payload));
             } else if (message.type === 'fileSelected') {
-                setRequest((prev) => ({
-                    ...prev,
-                    body: {
-                        ...prev.body,
-                        type: 'binary',
-                        binary: message.payload
-                    } as ApiRequestBody
-                }));
+                const context = message.context;
+                if (context && context.type === 'formData' && context.rowId) {
+                    setRequest((prev) => {
+                        const newFormData =
+                            prev.body?.formData?.map((item) =>
+                                item.id === context.rowId ? { ...item, value: message.payload } : item
+                            ) || [];
+
+                        return {
+                            ...prev,
+                            body: {
+                                ...prev.body,
+                                formData: newFormData
+                            } as ApiRequestBody
+                        };
+                    });
+                } else {
+                    setRequest((prev) => ({
+                        ...prev,
+                        body: {
+                            ...prev.body,
+                            type: 'binary',
+                            binary: message.payload
+                        } as ApiRequestBody
+                    }));
+                }
             }
         };
         window.addEventListener('message', handleMessage);

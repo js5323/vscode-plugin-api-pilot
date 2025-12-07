@@ -1,11 +1,25 @@
 import React from 'react';
-import { Box, RadioGroup, FormControlLabel, Radio, Typography, TextField, Button } from '@mui/material';
+import {
+    Box,
+    RadioGroup,
+    FormControlLabel,
+    Radio,
+    Typography,
+    TextField,
+    Select,
+    MenuItem,
+    Button,
+    Stack,
+    IconButton,
+    Divider
+} from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import KeyValueTable from './KeyValueTable';
 import { ApiRequestBody, KeyValueItem } from '../../types';
-import { getVsCodeApi } from '../../utils/vscode';
 
-const vscode = getVsCodeApi();
+const vscode = (window as any).vscode;
 
 interface BodyEditorProps {
     body: ApiRequestBody;
@@ -29,8 +43,34 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
         onChange({ ...body, raw: value });
     };
 
-    const handleSelectFile = () => {
-        vscode.postMessage({ type: 'selectFile' });
+    const handleSelectFile = (rowId: string) => {
+        if (vscode) {
+            vscode.postMessage({
+                type: 'selectFile',
+                context: { type: 'formData', rowId }
+            });
+        }
+    };
+
+    const handleSelectBinaryFile = () => {
+        if (vscode) {
+            vscode.postMessage({
+                type: 'selectFile',
+                context: { type: 'binary' }
+            });
+        }
+    };
+
+    const handleBeautify = () => {
+        if (!body.raw) return;
+        try {
+            if (body.rawType === 'JSON' || !body.rawType || body.rawType === 'JavaScript') {
+                const formatted = JSON.stringify(JSON.parse(body.raw), null, 2);
+                onChange({ ...body, raw: formatted });
+            }
+        } catch (e) {
+            // console.error(e);
+        }
     };
 
     return (
@@ -78,7 +118,12 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                 )}
 
                 {body.type === 'form-data' && (
-                    <KeyValueTable items={body.formData || []} onChange={handleFormDataChange} />
+                    <KeyValueTable
+                        items={body.formData || []}
+                        onChange={handleFormDataChange}
+                        enableFileSupport={true}
+                        onSelectFile={handleSelectFile}
+                    />
                 )}
 
                 {body.type === 'x-www-form-urlencoded' && (
@@ -86,23 +131,71 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                 )}
 
                 {body.type === 'raw' && (
-                    <TextField
-                        multiline
-                        fullWidth
-                        minRows={10}
-                        placeholder="Raw body content"
-                        value={body.raw || ''}
-                        onChange={(e) => handleRawChange(e.target.value)}
-                        sx={{
-                            fontFamily: 'monospace',
-                            '& .MuiInputBase-root': { fontFamily: 'monospace' }
-                        }}
-                    />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={1}
+                            sx={{ mb: 1, justifyContent: 'flex-end' }}
+                        >
+                            <Select
+                                value={body.rawType || 'JSON'}
+                                onChange={(e) => onChange({ ...body, rawType: e.target.value as any })}
+                                size="small"
+                                variant="standard"
+                                disableUnderline
+                                sx={{ fontSize: '0.85rem', fontWeight: 'bold', minWidth: 60 }}
+                            >
+                                {['Text', 'JavaScript', 'JSON', 'HTML', 'XML'].map((t) => (
+                                    <MenuItem key={t} value={t} dense>
+                                        {t}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                        cursor: 'pointer',
+                                        color: 'text.secondary'
+                                    }}
+                                >
+                                    <Typography variant="caption">Schema</Typography>
+                                </Box>
+                                <Button
+                                    size="small"
+                                    onClick={handleBeautify}
+                                    sx={{ textTransform: 'none', fontWeight: 'bold' }}
+                                >
+                                    Beautify
+                                </Button>
+                            </Box>
+                        </Stack>
+                        <TextField
+                            multiline
+                            fullWidth
+                            minRows={10}
+                            placeholder="Raw body content"
+                            value={body.raw || ''}
+                            onChange={(e) => handleRawChange(e.target.value)}
+                            sx={{
+                                flexGrow: 1,
+                                fontFamily: 'monospace',
+                                '& .MuiInputBase-root': {
+                                    fontFamily: 'monospace',
+                                    height: '100%',
+                                    alignItems: 'flex-start'
+                                }
+                            }}
+                        />
+                    </Box>
                 )}
 
                 {body.type === 'binary' && (
                     <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-                        <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={handleSelectFile}>
+                        <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={handleSelectBinaryFile}>
                             Select File
                         </Button>
                         {body.binary ? (
@@ -118,43 +211,97 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                 )}
 
                 {body.type === 'graphql' && (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}>
-                        <Typography variant="subtitle2">Query</Typography>
-                        <TextField
-                            multiline
-                            fullWidth
-                            minRows={6}
-                            value={body.graphql?.query || ''}
-                            onChange={(e) =>
-                                onChange({
-                                    ...body,
-                                    graphql: {
-                                        ...body.graphql,
-                                        query: e.target.value,
-                                        variables: body.graphql?.variables || ''
+                    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 1 }}>
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={1}
+                            sx={{ justifyContent: 'flex-end', mb: 0 }}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                    <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                                        Auto Fetch
+                                    </Typography>
+                                </Box>
+                                <IconButton size="small">
+                                    <RefreshIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton size="small">
+                                    <WarningAmberIcon fontSize="small" color="warning" />
+                                </IconButton>
+                            </Box>
+                        </Stack>
+
+                        <Box sx={{ display: 'flex', flexGrow: 1, gap: 2, overflow: 'hidden' }}>
+                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                <Typography variant="caption" sx={{ mb: 1, fontWeight: 'bold' }}>
+                                    QUERY
+                                </Typography>
+                                <TextField
+                                    multiline
+                                    fullWidth
+                                    placeholder="Enter GraphQL Query"
+                                    value={body.graphql?.query || ''}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...body,
+                                            graphql: {
+                                                ...body.graphql,
+                                                query: e.target.value,
+                                                variables: body.graphql?.variables || ''
+                                            }
+                                        })
                                     }
-                                })
-                            }
-                            sx={{ fontFamily: 'monospace' }}
-                        />
-                        <Typography variant="subtitle2">Variables</Typography>
-                        <TextField
-                            multiline
-                            fullWidth
-                            minRows={4}
-                            value={body.graphql?.variables || ''}
-                            onChange={(e) =>
-                                onChange({
-                                    ...body,
-                                    graphql: {
-                                        ...body.graphql,
-                                        query: body.graphql?.query || '',
-                                        variables: e.target.value
+                                    sx={{
+                                        flexGrow: 1,
+                                        fontFamily: 'monospace',
+                                        '& .MuiInputBase-root': {
+                                            fontFamily: 'monospace',
+                                            height: '100%',
+                                            alignItems: 'flex-start',
+                                            bgcolor: 'background.paper'
+                                        }
+                                    }}
+                                />
+                            </Box>
+
+                            <Divider orientation="vertical" flexItem />
+
+                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                                        GRAPHQL VARIABLES
+                                    </Typography>
+                                </Box>
+                                <TextField
+                                    multiline
+                                    fullWidth
+                                    placeholder="JSON Variables"
+                                    value={body.graphql?.variables || ''}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...body,
+                                            graphql: {
+                                                ...body.graphql,
+                                                query: body.graphql?.query || '',
+                                                variables: e.target.value
+                                            }
+                                        })
                                     }
-                                })
-                            }
-                            sx={{ fontFamily: 'monospace' }}
-                        />
+                                    sx={{
+                                        flexGrow: 1,
+                                        fontFamily: 'monospace',
+                                        '& .MuiInputBase-root': {
+                                            fontFamily: 'monospace',
+                                            height: '100%',
+                                            alignItems: 'flex-start',
+                                            bgcolor: 'background.paper'
+                                        }
+                                    }}
+                                />
+                            </Box>
+                        </Box>
                     </Box>
                 )}
             </Box>

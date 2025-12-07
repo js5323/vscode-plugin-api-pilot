@@ -13,9 +13,11 @@ import {
     Typography,
     Button,
     Menu,
-    MenuItem
+    MenuItem,
+    Select
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { KeyValueItem } from '../../types';
 
 interface KeyValueTableProps {
@@ -23,9 +25,18 @@ interface KeyValueTableProps {
     onChange: (items: KeyValueItem[]) => void;
     title?: string; // e.g. "Query Params"
     enablePresets?: boolean;
+    enableFileSupport?: boolean;
+    onSelectFile?: (rowId: string) => void;
 }
 
-export default function KeyValueTable({ items, onChange, title, enablePresets }: KeyValueTableProps) {
+export default function KeyValueTable({
+    items,
+    onChange,
+    title,
+    enablePresets,
+    enableFileSupport,
+    onSelectFile
+}: KeyValueTableProps) {
     const [rows, setRows] = useState<KeyValueItem[]>([
         ...items,
         { id: Date.now().toString(), key: '', value: '', description: '', isEnabled: true } // Empty row at bottom
@@ -233,15 +244,62 @@ export default function KeyValueTable({ items, onChange, title, enablePresets }:
                                         />
                                     </TableCell>
                                     <TableCell sx={{ p: 0.5 }}>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            variant="standard"
-                                            placeholder="Value"
-                                            value={row.value}
-                                            onChange={(e) => handleItemChange(row.id, 'value', e.target.value)}
-                                            InputProps={{ disableUnderline: true }}
-                                        />
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            {enableFileSupport && row.type === 'file' ? (
+                                                <Button
+                                                    fullWidth
+                                                    variant="outlined"
+                                                    size="small"
+                                                    startIcon={<UploadFileIcon />}
+                                                    onClick={() => onSelectFile?.(row.id)}
+                                                    title={row.value}
+                                                    sx={{
+                                                        flexGrow: 1,
+                                                        justifyContent: 'flex-start',
+                                                        textTransform: 'none',
+                                                        borderColor: 'divider',
+                                                        color: row.value ? 'text.primary' : 'text.secondary',
+                                                        height: '32px',
+                                                        overflow: 'hidden',
+                                                        whiteSpace: 'nowrap'
+                                                    }}
+                                                >
+                                                    {row.value ? row.value.split(/[/\\]/).pop() : 'Select File'}
+                                                </Button>
+                                            ) : (
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    variant="standard"
+                                                    placeholder="Value"
+                                                    value={row.value}
+                                                    onChange={(e) => handleItemChange(row.id, 'value', e.target.value)}
+                                                    InputProps={{ disableUnderline: true }}
+                                                />
+                                            )}
+
+                                            {enableFileSupport && (
+                                                <Select
+                                                    value={row.type || 'text'}
+                                                    onChange={(e) => handleItemChange(row.id, 'type', e.target.value)}
+                                                    size="small"
+                                                    variant="standard"
+                                                    disableUnderline
+                                                    sx={{
+                                                        fontSize: '0.75rem',
+                                                        minWidth: 50,
+                                                        '& .MuiSelect-select': { py: 0.5, pr: 2 }
+                                                    }}
+                                                >
+                                                    <MenuItem value="text" dense>
+                                                        Text
+                                                    </MenuItem>
+                                                    <MenuItem value="file" dense>
+                                                        File
+                                                    </MenuItem>
+                                                </Select>
+                                            )}
+                                        </Box>
                                     </TableCell>
                                     <TableCell sx={{ p: 0.5 }}>
                                         <TextField
