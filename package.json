@@ -2,6 +2,11 @@
     "name": "apipilot",
     "displayName": "ApiPilot",
     "description": "A powerful API Client for VS Code",
+    "publisher": "apipilot",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/apipilot/apipilot.git"
+    },
     "version": "0.0.1",
     "engines": {
         "vscode": "^1.90.0"
@@ -44,7 +49,7 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "vscode:prepublish": "npm run build:webview && npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
@@ -61,6 +66,7 @@
         "@types/vscode": "^1.90.0",
         "@typescript-eslint/eslint-plugin": "^8.48.1",
         "@typescript-eslint/parser": "^8.48.1",
+        "@vscode/vsce": "^3.7.1",
         "eslint": "^9.39.1",
         "glob": "^10.3.12",
         "husky": "^9.1.7",
