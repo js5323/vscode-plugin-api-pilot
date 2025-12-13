@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { SettingsPanel } from './SettingsPanel';
+import { Environment } from '../webview/src/types';
 
 export class EnvironmentPanel {
     public static currentPanels = new Map<string, EnvironmentPanel>();
@@ -9,7 +10,7 @@ export class EnvironmentPanel {
     private _disposables: vscode.Disposable[] = [];
     private readonly _environmentId?: string;
 
-    public static createOrShow(context: vscode.ExtensionContext, environment?: any) {
+    public static createOrShow(context: vscode.ExtensionContext, environment?: Environment) {
         const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
         // If we have an environment ID, check if we already have a panel for it
@@ -43,7 +44,7 @@ export class EnvironmentPanel {
         }
     }
 
-    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, environment?: any) {
+    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, environment?: Environment) {
         this._panel = panel;
         this._extensionUri = context.extensionUri;
         this._context = context;
@@ -72,7 +73,7 @@ export class EnvironmentPanel {
                     }
                     case 'saveEnvironment': {
                         const updatedEnv = message.payload;
-                        const environments = this._context.globalState.get<any[]>('apipilot.environments', []);
+                        const environments = this._context.globalState.get<Environment[]>('apipilot.environments', []);
 
                         const index = environments.findIndex((e) => e.id === updatedEnv.id);
                         if (index !== -1) {
@@ -93,9 +94,10 @@ export class EnvironmentPanel {
                         break;
                     }
                     case 'getSettings': {
-                        const settings: any = this._context.globalState.get('apipilot.settings', {});
-                        if (!settings.general) settings.general = {};
-                        if (settings.general.autoSave === undefined) settings.general.autoSave = true;
+                        const settings: unknown = this._context.globalState.get('apipilot.settings', {});
+                        const typedSettings = settings as { general?: { autoSave?: boolean } };
+                        if (!typedSettings.general) typedSettings.general = {};
+                        if (typedSettings.general.autoSave === undefined) typedSettings.general.autoSave = true;
 
                         this._panel.webview.postMessage({
                             type: 'updateSettings',
@@ -123,7 +125,7 @@ export class EnvironmentPanel {
         }
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview, initialData?: any) {
+    private _getHtmlForWebview(webview: vscode.Webview, initialData?: unknown) {
         const isDev = this._context.extensionMode === vscode.ExtensionMode.Development;
 
         let scriptUri = '';

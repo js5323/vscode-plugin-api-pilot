@@ -35,6 +35,12 @@ export function activate(context: vscode.ExtensionContext) {
             sidebarProvider.refresh();
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('apipilot.refreshHistory', () => {
+            sidebarProvider.refreshHistory();
+        })
+    );
 }
 
 export function deactivate() {}

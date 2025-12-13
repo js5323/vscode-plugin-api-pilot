@@ -1,4 +1,4 @@
-export const METHOD_COLORS: any = {
+export const METHOD_COLORS: Record<string, string> = {
     GET: 'success',
     POST: 'warning',
     PUT: 'info',

@@ -26,9 +26,10 @@ import ShareIcon from '@mui/icons-material/Share';
 import CodeIcon from '@mui/icons-material/Code';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import { useState } from 'react';
 import { METHOD_COLORS } from '../../constants';
-import { ApiRequest } from '../../types';
+import { ApiRequest, ApiExample } from '../../types';
 import ExampleItem from './ExampleItem';
 
 interface RequestItemProps {
@@ -37,12 +38,14 @@ interface RequestItemProps {
     onDelete?: (id: string) => void;
     onRename?: (id: string, newName: string) => void;
     onDuplicate?: (id: string) => void;
+    onMove?: (id: string) => void;
     onShare?: (id: string) => void;
     onAddExample?: (id: string) => void;
-    onOpenExample?: (example: any, parentRequest: ApiRequest) => void;
+    onOpenExample?: (example: ApiExample, parentRequest: ApiRequest) => void;
     onDeleteExample?: (exampleId: string, requestId: string) => void;
     onRenameExample?: (exampleId: string, requestId: string, newName: string) => void;
     onDuplicateExample?: (exampleId: string, requestId: string) => void;
+    onDrop?: (draggedId: string, targetFolderId: string) => void;
 }
 
 export default function RequestItem({
@@ -51,18 +54,21 @@ export default function RequestItem({
     onDelete,
     onRename,
     onDuplicate,
+    onMove,
     onShare,
     onAddExample,
     onOpenExample,
     onDeleteExample,
     onRenameExample,
-    onDuplicateExample
+    onDuplicateExample,
+    onDrop
 }: RequestItemProps) {
     const [hover, setHover] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [renameDialogOpen, setRenameDialogOpen] = useState(false);
     const [newName, setNewName] = useState(request.name);
     const [expanded, setExpanded] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
 
     const menuOpen = Boolean(anchorEl);
     const hasExamples = request.examples && request.examples.length > 0;
@@ -99,6 +105,14 @@ export default function RequestItem({
         handleMenuClose();
     };
 
+    const handleMove = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onMove) {
+            onMove(request.id);
+        }
+        handleMenuClose();
+    };
+
     const handleShare = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (onShare) onShare(request.id);
@@ -119,12 +133,69 @@ export default function RequestItem({
         setExpanded(!expanded);
     };
 
+    const handleDragStart = (e: React.DragEvent) => {
+        e.stopPropagation();
+        e.dataTransfer.setData('application/json', JSON.stringify({ id: request.id, type: 'request' }));
+        e.dataTransfer.effectAllowed = 'move';
+        // Ensure only the item is shown as drag image
+        if (e.currentTarget) {
+            const target = e.currentTarget as HTMLElement;
+            e.dataTransfer.setDragImage(target, 0, 0);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isDragOver) setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isDragOver) setIsDragOver(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+        const data = e.dataTransfer.getData('application/json');
+        if (data) {
+            try {
+                const { id } = JSON.parse(data);
+                // If dropped on a request, we might want to move to the same parent folder?
+                // Or maybe just ignore?
+                // The user requirement is to move directories/files.
+                // If I drop on a request, it's ambiguous.
+                // But for usability, dropping on a sibling often means "move here".
+                // Since I don't have easy access to parentId here (it is in request object but...),
+                // I will just use the parentId of the current request if available.
+                if (id !== request.id && onDrop && request.parentId) {
+                    onDrop(id, request.parentId);
+                }
+            } catch (e) {
+                console.error('Invalid drag data', e);
+            }
+        }
+    };
+
     return (
         <>
             <ListItem
                 disablePadding
+                draggable
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 onMouseEnter={() => setHover(true)}
                 onMouseLeave={() => setHover(false)}
+                sx={{
+                    bgcolor: isDragOver ? 'action.hover' : 'transparent',
+                    border: isDragOver ? '1px dashed' : 'none',
+                    borderColor: 'primary.main'
+                }}
                 secondaryAction={
                     (hover || menuOpen) && (
                         <IconButton
@@ -209,6 +280,12 @@ export default function RequestItem({
                             <ShareIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
                         </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Share</ListItemText>
+                    </MenuItem>
+                    <MenuItem onClick={handleMove}>
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <DriveFileMoveIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
+                        <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Move</ListItemText>
                     </MenuItem>
                     <Divider sx={{ my: 0.5 }} />
                     <MenuItem onClick={handleRenameOpen}>

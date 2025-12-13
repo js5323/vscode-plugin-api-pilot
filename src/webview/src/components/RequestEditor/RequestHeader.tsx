@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Typography, Breadcrumbs, TextField, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, Breadcrumbs, TextField, IconButton } from '@mui/material';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -27,7 +27,7 @@ export default function RequestHeader({ request, onNameChange, onSave }: Request
         >
             <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
                 <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
-                    {(request._folderPath || []).map((folder: any) => (
+                    {(request._folderPath || []).map((folder: { id: string; name: string }) => (
                         <Typography key={folder.id} color="text.secondary" variant="body2">
                             {folder.name}
                         </Typography>

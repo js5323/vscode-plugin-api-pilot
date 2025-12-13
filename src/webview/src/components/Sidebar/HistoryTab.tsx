@@ -4,12 +4,13 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import RequestItem from './RequestItem';
 import { getVsCodeApi } from '../../utils/vscode';
 import SidebarSearch from './SidebarSearch';
+import { HistoryItem } from '../../types';
 
 const vscode = getVsCodeApi();
 
 export default function HistoryTab() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [history, setHistory] = useState<any[]>([]);
+    const [history, setHistory] = useState<HistoryItem[]>([]);
 
     useEffect(() => {
         vscode.postMessage({ type: 'getHistory' });

@@ -10,6 +10,8 @@ import {
     DialogContent,
     DialogContentText,
     DialogActions,
+    ListItemButton,
+    ListItemText,
     CircularProgress
 } from '@mui/material';
 import FolderItem from './FolderItem';
@@ -28,6 +30,9 @@ export default function CollectionsTab() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const [exampleToDelete, setExampleToDelete] = useState<{ exampleId: string; requestId: string } | null>(null);
+    const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+    const [itemToMove, setItemToMove] = useState<string | null>(null);
+    const [targetFolderId, setTargetFolderId] = useState<string>('');
 
     useEffect(() => {
         if (searchTerm.trim() === '') {
@@ -165,17 +170,22 @@ export default function CollectionsTab() {
                 newItems.push(item);
                 if (item.id === id) {
                     const cloneItem = (original: CollectionItem): CollectionItem => {
-                        const newItem = {
-                            ...original,
-                            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                            name: original.name + ' Copy'
-                        } as any;
                         if (original.type === 'folder') {
-                            (newItem as CollectionFolder).children = (original as CollectionFolder).children.map(
-                                (child) => cloneItem(child)
-                            );
+                            const newFolder: CollectionFolder = {
+                                ...original,
+                                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                                name: original.name + ' Copy',
+                                children: original.children.map((child) => cloneItem(child))
+                            };
+                            return newFolder;
+                        } else {
+                            const newRequest: ApiRequest = {
+                                ...original,
+                                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                                name: original.name + ' Copy'
+                            };
+                            return newRequest;
                         }
-                        return newItem;
                     };
                     newItems.push(cloneItem(item));
                 } else if (item.type === 'folder') {
@@ -327,6 +337,66 @@ export default function CollectionsTab() {
         setExampleToDelete(null);
     };
 
+    // Move functionality
+    const handleMoveItem = (id: string) => {
+        setItemToMove(id);
+        setMoveDialogOpen(true);
+    };
+
+    const handleMoveConfirm = () => {
+        if (itemToMove) {
+            vscode.postMessage({
+                type: 'moveItem',
+                payload: {
+                    itemId: itemToMove,
+                    targetFolderId: targetFolderId || null
+                }
+            });
+        }
+        setMoveDialogOpen(false);
+        setItemToMove(null);
+        setTargetFolderId('');
+    };
+
+    const handleMoveCancel = () => {
+        setMoveDialogOpen(false);
+        setItemToMove(null);
+        setTargetFolderId('');
+    };
+
+    const handleDrop = (itemId: string, targetId: string | null) => {
+        // Prevent dropping onto itself or its children
+        if (itemId === targetId) return;
+
+        vscode.postMessage({
+            type: 'moveItem',
+            payload: {
+                itemId: itemId,
+                targetFolderId: targetId
+            }
+        });
+    };
+
+    const getAllFolders = (items: CollectionItem[], depth = 0): { id: string; name: string; depth: number }[] => {
+        let folders: { id: string; name: string; depth: number }[] = [];
+        items.forEach((item) => {
+            if (item.type === 'folder') {
+                // Don't include the item itself or its children if it's the item being moved
+                if (item.id === itemToMove) return;
+
+                folders.push({ id: item.id, name: item.name, depth });
+                if ((item as CollectionFolder).children) {
+                    const childrenFolders = getAllFolders((item as CollectionFolder).children, depth + 1);
+                    // Filter out children if parent is the item being moved (already handled by skip above, but recursively)
+                    folders = [...folders, ...childrenFolders];
+                }
+            }
+        });
+        return folders;
+    };
+
+    const availableFolders = getAllFolders(collections);
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <SidebarSearch
@@ -383,6 +453,8 @@ export default function CollectionsTab() {
                                     onDeleteExample={handleDeleteExampleClick}
                                     onRenameExample={handleRenameExample}
                                     onDuplicateExample={handleDuplicateExample}
+                                    onMove={handleMoveItem}
+                                    onDrop={handleDrop}
                                 />
                             ) : (
                                 <RequestItem
@@ -403,6 +475,7 @@ export default function CollectionsTab() {
                                     onDeleteExample={handleDeleteExampleClick}
                                     onRenameExample={handleRenameExample}
                                     onDuplicateExample={handleDuplicateExample}
+                                    onMove={handleMoveItem}
                                 />
                             )
                         )}
@@ -426,6 +499,33 @@ export default function CollectionsTab() {
                     <Button onClick={handleDeleteCancel}>Cancel</Button>
                     <Button onClick={handleDeleteConfirm} color="error" autoFocus>
                         Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={moveDialogOpen} onClose={handleMoveCancel} maxWidth="xs" fullWidth>
+                <DialogTitle>Move Item</DialogTitle>
+                <DialogContent dividers sx={{ height: 300, p: 0 }}>
+                    <List dense>
+                        <ListItemButton selected={targetFolderId === ''} onClick={() => setTargetFolderId('')}>
+                            <ListItemText primary="Root" />
+                        </ListItemButton>
+                        {availableFolders.map((folder) => (
+                            <ListItemButton
+                                key={folder.id}
+                                selected={targetFolderId === folder.id}
+                                onClick={() => setTargetFolderId(folder.id)}
+                                sx={{ pl: folder.depth * 2 + 2 }}
+                            >
+                                <ListItemText primary={folder.name} />
+                            </ListItemButton>
+                        ))}
+                    </List>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleMoveCancel}>Cancel</Button>
+                    <Button onClick={handleMoveConfirm} variant="contained" autoFocus>
+                        Move
                     </Button>
                 </DialogActions>
             </Dialog>

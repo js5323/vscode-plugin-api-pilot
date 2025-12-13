@@ -127,7 +127,7 @@ export default function KeyValueTable({
         }
     };
 
-    const handleItemChange = (id: string, field: keyof KeyValueItem, value: any) => {
+    const handleItemChange = (id: string, field: keyof KeyValueItem, value: string | boolean) => {
         let newItems = [...items];
         const itemIndex = newItems.findIndex((i) => i.id === id);
 

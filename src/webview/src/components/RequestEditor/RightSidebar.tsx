@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Box, IconButton, Tooltip, Paper, Typography, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { useState, useEffect, useRef } from 'react';
+import { Box, IconButton, Tooltip, Typography, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import CodeIcon from '@mui/icons-material/Code';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CloseIcon from '@mui/icons-material/Close';
@@ -19,7 +19,9 @@ export default function RightSidebar({ request }: RightSidebarProps) {
     const [activeTab, setActiveTab] = useState<'code' | null>(null);
     const [language, setLanguage] = useState('curl');
     const [snippet, setSnippet] = useState('');
+    const [width, setWidth] = useState(300);
     const theme = useVsCodeTheme();
+    const isResizing = useRef(false);
 
     useEffect(() => {
         if (expanded && activeTab === 'code') {
@@ -38,6 +40,45 @@ export default function RightSidebar({ request }: RightSidebarProps) {
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
     }, []);
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isResizing.current) return;
+        // Calculate width based on mouse position from right edge of screen?
+        // Or simply: e.clientX is where the mouse is.
+        // The RightSidebar is anchored to the right.
+        // Structure: [Main] [Icons] [Resizer] [Content]
+        // Actually, RequestEditor renders: [Main] [RightSidebar].
+        // RightSidebar renders: [Icons] [Content].
+        // So visually: [Main] | [Icons] | [Content] | (Edge of screen)
+        // If I drag Resizer (between Icons and Content), I am changing Content Width.
+        // e.clientX increases -> move right -> Content Width decreases.
+        // e.clientX decreases -> move left -> Content Width increases.
+        // Wait, if Resizer is at [Icons]|[Resizer]|[Content].
+        // If I move mouse right, Resizer moves right, Content gets smaller?
+        // Let's assume Content is on the right.
+
+        // We need the X position of the Right edge of the window.
+        const windowWidth = document.body.clientWidth;
+        const newWidth = windowWidth - e.clientX;
+        // But e.clientX is at the resizer.
+        // Distance from Resizer to Right Edge = Content Width.
+        setWidth(Math.max(200, Math.min(newWidth, 800)));
+    };
+
+    const handleMouseUp = () => {
+        isResizing.current = false;
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'default';
+    };
+
+    const startResizing = (e: React.MouseEvent) => {
+        e.preventDefault();
+        isResizing.current = true;
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'col-resize';
+    };
 
     const generateSnippet = () => {
         vscode.postMessage({
@@ -89,9 +130,25 @@ export default function RightSidebar({ request }: RightSidebarProps) {
                 </Tooltip>
             </Box>
 
+            {/* Resizer */}
+            {expanded && (
+                <Box
+                    onMouseDown={startResizing}
+                    sx={{
+                        width: 4,
+                        cursor: 'col-resize',
+                        bgcolor: 'divider',
+                        transition: 'background-color 0.2s',
+                        '&:hover': {
+                            bgcolor: 'primary.main'
+                        }
+                    }}
+                />
+            )}
+
             {/* Content Panel */}
             {expanded && (
-                <Box sx={{ width: 300, display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+                <Box sx={{ width: width, display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
                     <Box
                         sx={{
                             p: 1,

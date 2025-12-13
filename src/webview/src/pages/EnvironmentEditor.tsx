@@ -2,35 +2,38 @@ import { useState, useEffect } from 'react';
 import { Box, Typography, TextField, Button, Stack, Paper } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import KeyValueTable from '../components/RequestEditor/KeyValueTable';
-import { Environment, KeyValueItem } from '../types';
+import { Environment, KeyValueItem, Settings } from '../types';
+import { getVsCodeApi } from '../utils/vscode';
+
+const vscode = getVsCodeApi();
 
 export default function EnvironmentEditor() {
     const [environment, setEnvironment] = useState<Environment | null>(null);
     const [isDirty, setIsDirty] = useState(false);
-    const [settings, setSettings] = useState<any>({ general: { autoSave: true } });
+    const [settings, setSettings] = useState<Partial<Settings>>({
+        general: { autoSave: true, timeout: 0, maxResponseSize: 0, sslVerification: true, defaultHeaders: [] }
+    });
 
     useEffect(() => {
         // Load initial data
-        const initialData = (window as any).initialData;
+        const initialData = (window as unknown as { initialData?: Environment }).initialData;
         if (initialData) {
             setEnvironment(initialData);
         }
 
         // Get settings
-        if ((window as any).vscode) {
-            (window as any).vscode.postMessage({ type: 'getSettings' });
-        }
+        vscode.postMessage({ type: 'getSettings' });
 
         // Listen for messages
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             switch (message.type) {
                 case 'updateEnvironment':
-                    setEnvironment(message.payload);
+                    setEnvironment(message.payload as Environment);
                     setIsDirty(false);
                     break;
                 case 'updateSettings':
-                    setSettings(message.payload);
+                    setSettings(message.payload as Settings);
                     break;
             }
         };
@@ -40,8 +43,8 @@ export default function EnvironmentEditor() {
     }, []);
 
     const handleSave = () => {
-        if (environment && (window as any).vscode) {
-            (window as any).vscode.postMessage({
+        if (environment) {
+            vscode.postMessage({
                 type: 'saveEnvironment',
                 payload: environment
             });

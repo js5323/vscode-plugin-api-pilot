@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { RequestHandler } from './RequestHandler';
 import { Logger } from './utils/Logger';
-import { CodeGenerator } from './utils/CodeGenerator';
-import { ApiRequest, CollectionItem, CollectionFolder, Environment } from '../webview/src/types';
+import { ApiRequest, Environment } from '../webview/src/types';
 
 export class RequestPanel {
     public static currentPanels = new Map<string, RequestPanel>();
@@ -76,22 +75,45 @@ export class RequestPanel {
 
                             Logger.log(`Request Execution Completed. Status: ${response.status}`);
 
+                            // Update Global History
+                            const history = this._context.globalState.get<unknown[]>('apipilot.history', []);
+                            const historyItem = {
+                                ...message.payload,
+                                id: Date.now().toString(),
+                                responseHistory: undefined,
+                                response: {
+                                    status: response.status,
+                                    statusText: response.statusText,
+                                    time: Date.now(),
+                                    size: response.size,
+                                    duration: response.duration
+                                },
+                                timestamp: Date.now()
+                            };
+                            history.unshift(historyItem);
+                            if (history.length > 50) history.pop();
+                            await this._context.globalState.update('apipilot.history', history);
+
+                            // Notify Sidebar to refresh history
+                            vscode.commands.executeCommand('apipilot.refreshHistory');
+
                             this._panel.webview.postMessage({
-                                type: 'executeResponse',
-                                payload: response
-                            });
-                        } catch (error: any) {
-                            Logger.error('Unexpected Error in RequestPanel:', error);
-                            this._panel.webview.postMessage({
-                                type: 'executeResponse',
+                                type: 'response',
                                 payload: {
-                                    status: 0,
-                                    statusText: 'Error',
-                                    data: error.message || 'An unexpected error occurred',
-                                    headers: {},
-                                    duration: 0,
-                                    size: 0
+                                    status: response.status,
+                                    statusText: response.statusText,
+                                    data: response.data,
+                                    headers: response.headers,
+                                    duration: response.duration,
+                                    size: response.size
                                 }
+                            });
+                        } catch (e: unknown) {
+                            const errorMessage = e instanceof Error ? e.message : String(e);
+                            Logger.error(`Request execution failed: ${errorMessage}`);
+                            this._panel.webview.postMessage({
+                                type: 'error',
+                                payload: errorMessage
                             });
                         }
                         break;
@@ -100,13 +122,13 @@ export class RequestPanel {
                         this._panel.title = message.value;
                         break;
                     }
-                    case 'generateCodeSnippet': {
-                        const { request, language } = message.payload;
-                        const snippet = CodeGenerator.generate(request, language);
-                        this._panel.webview.postMessage({
-                            type: 'codeSnippetGenerated',
-                            payload: snippet
-                        });
+                    case 'generateCode': {
+                        // TODO: Implement code generation
+                        // const code = CodeGenerator.generate(message.payload.request, message.payload.language);
+                        // this._panel.webview.postMessage({
+                        //     type: 'codeGenerated',
+                        //     payload: code
+                        // });
                         break;
                     }
                     case 'onInfo': {
@@ -177,7 +199,9 @@ export class RequestPanel {
                         break;
                     }
                     case 'getSettings': {
-                        const settings: any = this._context.globalState.get('apipilot.settings', {});
+                        const settings = this._context.globalState.get('apipilot.settings', {}) as {
+                            general?: { autoSave?: boolean };
+                        };
                         if (!settings.general) settings.general = {};
                         if (settings.general.autoSave === undefined) settings.general.autoSave = true;
 

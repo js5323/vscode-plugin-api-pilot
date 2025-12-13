@@ -1,9 +1,37 @@
 import * as yaml from 'js-yaml';
 import { CollectionItem, ApiRequest, CollectionFolder } from '../../webview/src/types';
 
+interface OpenApiSpec {
+    openapi: string;
+    info: {
+        title: string;
+        version: string;
+    };
+    paths: Record<string, Record<string, unknown>>;
+    tags?: { name: string }[];
+}
+
+interface OpenApiMediaType {
+    schema: {
+        type: string;
+        properties?: Record<string, unknown>;
+        example?: unknown;
+    };
+}
+
+interface OpenApiOperation {
+    summary: string;
+    responses: Record<string, unknown>;
+    tags?: string[];
+    parameters?: Record<string, unknown>[];
+    requestBody?: {
+        content: Record<string, OpenApiMediaType>;
+    };
+}
+
 export class Exporter {
     static exportToSwagger(collection: CollectionFolder | CollectionItem[]): string {
-        const openApi: any = {
+        const openApi: OpenApiSpec = {
             openapi: '3.0.0',
             info: {
                 title: 'Exported Collection',
@@ -18,7 +46,7 @@ export class Exporter {
         return yaml.dump(openApi);
     }
 
-    private static processItems(items: CollectionItem[], openApi: any, tag?: string) {
+    private static processItems(items: CollectionItem[], openApi: OpenApiSpec, tag?: string) {
         items.forEach((item) => {
             if (item.type === 'folder') {
                 this.processItems((item as CollectionFolder).children, openApi, item.name);
@@ -28,7 +56,7 @@ export class Exporter {
         });
     }
 
-    private static addRequestToOpenApi(request: ApiRequest, openApi: any, tag?: string) {
+    private static addRequestToOpenApi(request: ApiRequest, openApi: OpenApiSpec, tag?: string) {
         try {
             const urlObj = new URL(request.url.startsWith('http') ? request.url : `http://${request.url}`);
             const path = urlObj.pathname;
@@ -38,7 +66,7 @@ export class Exporter {
                 openApi.paths[path] = {};
             }
 
-            const operation: any = {
+            const operation: OpenApiOperation = {
                 summary: request.name,
                 responses: {
                     '200': {
@@ -52,7 +80,7 @@ export class Exporter {
             }
 
             // Params
-            const parameters: any[] = [];
+            const parameters: Record<string, unknown>[] = [];
 
             // Query params
             if (request.queryParams) {
@@ -88,7 +116,7 @@ export class Exporter {
 
             // Body
             if (request.body && request.body.type !== 'none') {
-                const requestBody: any = {
+                const requestBody: { content: Record<string, OpenApiMediaType> } = {
                     content: {}
                 };
 
@@ -112,10 +140,13 @@ export class Exporter {
                     };
                     request.body.urlencoded?.forEach((u) => {
                         if (u.isEnabled && u.key) {
-                            requestBody.content['application/x-www-form-urlencoded'].schema.properties[u.key] = {
-                                type: 'string',
-                                example: u.value
-                            };
+                            const mediaType = requestBody.content['application/x-www-form-urlencoded'];
+                            if (mediaType.schema.properties) {
+                                mediaType.schema.properties[u.key] = {
+                                    type: 'string',
+                                    example: u.value
+                                };
+                            }
                         }
                     });
                 } else if (request.body.type === 'form-data') {
@@ -127,10 +158,13 @@ export class Exporter {
                     };
                     request.body.formData?.forEach((f) => {
                         if (f.isEnabled && f.key) {
-                            requestBody.content['multipart/form-data'].schema.properties[f.key] = {
-                                type: 'string',
-                                example: f.value
-                            };
+                            const mediaType = requestBody.content['multipart/form-data'];
+                            if (mediaType.schema.properties) {
+                                mediaType.schema.properties[f.key] = {
+                                    type: 'string',
+                                    example: f.value
+                                };
+                            }
                         }
                     });
                 }
@@ -138,7 +172,12 @@ export class Exporter {
                 operation.requestBody = requestBody;
             }
 
-            openApi.paths[path][method] = operation;
+            // We need to cast operation to unknown first because Record<string, unknown> values are not strictly checked against specific interfaces in assignment if not fully compatible index signature wise
+            // But actually openApi.paths[path][method] expects Record<string, unknown>
+            // And OpenApiOperation can be assigned to Record<string, unknown> if we are careful or use unknown
+            // Let's use 'as any' just for the assignment to the map, or better, type paths values as OpenApiOperation | any
+            // But for now, let's keep Record<string, unknown> and cast operation
+            openApi.paths[path][method] = operation as unknown as Record<string, unknown>;
         } catch (e) {
             // Invalid URL or other error, skip or log
             console.error('Error exporting request', request.name, e);

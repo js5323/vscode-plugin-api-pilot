@@ -22,6 +22,20 @@ export interface ApiRequestBody {
     };
 }
 
+export interface ApiExample {
+    id: string;
+    name: string;
+    status: number;
+    body: string;
+    request?: {
+        queryParams?: KeyValueItem[];
+        headers?: KeyValueItem[];
+        body?: ApiRequestBody;
+        method?: string;
+        url?: string;
+    };
+}
+
 export interface ApiRequest {
     id: string;
     name: string;
@@ -30,20 +44,22 @@ export interface ApiRequest {
     headers?: KeyValueItem[];
     body?: ApiRequestBody;
     queryParams?: KeyValueItem[];
-    auth?: any;
+    auth?: {
+        type: 'none' | 'basic' | 'bearer';
+        basic?: { username: string; password: string };
+        bearer?: { token: string };
+    };
     description?: string;
     type: 'request';
-    parentId?: string; // ID of parent folder or collection, or undefined if root
+    parentId?: string;
     examples?: ApiExample[];
-    responseHistory?: any[];
+    responseHistory?: {
+        status: number;
+        statusText: string;
+        time: number;
+        size: number;
+    }[];
     _folderPath?: { id: string; name: string }[];
-}
-
-export interface ApiExample {
-    id: string;
-    name: string;
-    status: number;
-    body: string;
 }
 
 export interface CollectionFolder {
@@ -51,7 +67,7 @@ export interface CollectionFolder {
     name: string;
     type: 'folder';
     children: (CollectionFolder | ApiRequest)[];
-    parentId?: string; // ID of parent folder, or undefined if root collection
+    parentId?: string;
 }
 
 export type CollectionItem = CollectionFolder | ApiRequest;
@@ -65,4 +81,64 @@ export interface Environment {
 
 export interface HistoryItem extends ApiRequest {
     timestamp: number;
+    response?: {
+        status: number;
+        statusText: string;
+        time: number;
+        size: number;
+    };
+}
+
+export interface ClientCertificate {
+    host: string;
+    crt: string;
+    key: string;
+    pfx: string;
+    passphrase?: string;
+}
+
+export interface Settings {
+    general: {
+        timeout: number;
+        maxResponseSize: number;
+        sslVerification: boolean;
+        autoSave: boolean;
+        defaultHeaders: KeyValueItem[];
+    };
+    proxy: {
+        useSystemProxy: boolean;
+        protocol: string;
+        host: string;
+        port: string;
+        auth: boolean;
+        username: string;
+        password: string;
+        bypass: string;
+    };
+    certificates: {
+        ca: string[];
+        client: ClientCertificate[];
+    };
+    theme?: 'light' | 'dark' | 'system';
+}
+
+export interface ApiResponse {
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+    data: unknown;
+    size: number;
+    time: number;
+    timestamp?: number;
+}
+
+export interface BackupData {
+    version: number;
+    timestamp: number;
+    data: {
+        collections: CollectionItem[];
+        environments: Environment[];
+        settings: Settings;
+        history: HistoryItem[];
+    };
 }

@@ -20,8 +20,9 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import KeyValueTable from './KeyValueTable';
 import { ApiRequestBody, KeyValueItem } from '../../types';
 import { useVsCodeTheme } from '../../hooks/useVsCodeTheme';
+import { getVsCodeApi } from '../../utils/vscode';
 
-const vscode = (window as any).vscode;
+const vscode = getVsCodeApi();
 
 interface BodyEditorProps {
     body: ApiRequestBody;
@@ -32,7 +33,7 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
     const theme = useVsCodeTheme();
 
     const handleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        onChange({ ...body, type: event.target.value as any });
+        onChange({ ...body, type: event.target.value as ApiRequestBody['type'] });
     };
 
     const handleFormDataChange = (items: KeyValueItem[]) => {
@@ -129,7 +130,12 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                     <Stack direction="row" alignItems="center" spacing={1}>
                         <Select
                             value={body.rawType || 'JSON'}
-                            onChange={(e) => onChange({ ...body, rawType: e.target.value as any })}
+                            onChange={(e) =>
+                                onChange({
+                                    ...body,
+                                    rawType: e.target.value as 'Text' | 'JavaScript' | 'JSON' | 'HTML' | 'XML'
+                                })
+                            }
                             size="small"
                             variant="standard"
                             disableUnderline

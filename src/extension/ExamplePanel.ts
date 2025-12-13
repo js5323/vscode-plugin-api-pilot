@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ApiExample, ApiRequest, CollectionItem, CollectionFolder } from '../webview/src/types';
+import { ApiExample, ApiRequest } from '../webview/src/types';
 
 export class ExamplePanel {
     public static currentPanels = new Map<string, ExamplePanel>();
@@ -9,7 +9,10 @@ export class ExamplePanel {
     private _disposables: vscode.Disposable[] = [];
     private readonly _exampleId?: string;
 
-    public static createOrShow(context: vscode.ExtensionContext, data?: any) {
+    public static createOrShow(
+        context: vscode.ExtensionContext,
+        data?: { example?: ApiExample; id?: string; name?: string } & Record<string, unknown>
+    ) {
         const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
         // Handle data being either the example object or { example: ..., parentRequest: ... }
@@ -17,7 +20,7 @@ export class ExamplePanel {
 
         // If we have an example ID, check if we already have a panel for it
         if (example && example.id) {
-            const existingPanel = ExamplePanel.currentPanels.get(example.id);
+            const existingPanel = ExamplePanel.currentPanels.get(example.id as string);
             if (existingPanel) {
                 existingPanel._panel.reveal(column);
                 return;
@@ -38,17 +41,21 @@ export class ExamplePanel {
         const examplePanel = new ExamplePanel(panel, context, data);
 
         if (example && example.id) {
-            ExamplePanel.currentPanels.set(example.id, examplePanel);
+            ExamplePanel.currentPanels.set(example.id as string, examplePanel);
         }
     }
 
-    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, data?: any) {
+    private constructor(
+        panel: vscode.WebviewPanel,
+        context: vscode.ExtensionContext,
+        data?: { example?: ApiExample; id?: string } & Record<string, unknown>
+    ) {
         this._panel = panel;
         this._extensionUri = context.extensionUri;
         this._context = context;
 
         const example = data?.example || data;
-        this._exampleId = example?.id;
+        this._exampleId = example?.id as string | undefined;
 
         this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, data);
 
@@ -96,7 +103,7 @@ export class ExamplePanel {
         }
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview, data?: any) {
+    private _getHtmlForWebview(webview: vscode.Webview, data?: unknown) {
         const isDev = this._context.extensionMode === vscode.ExtensionMode.Development;
 
         // Calculate path

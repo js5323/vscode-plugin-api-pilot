@@ -1,13 +1,13 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { URLSearchParams } from 'url';
 import { Logger } from './utils/Logger';
-import { ApiRequest, KeyValueItem, ApiRequestBody } from '../webview/src/types';
+import { ApiRequest, KeyValueItem } from '../webview/src/types';
 
 export interface ApiResponse {
     status: number;
     statusText: string;
-    data: any;
-    headers: any;
+    data: unknown;
+    headers: unknown;
     duration: number;
     size: number;
 }
@@ -72,7 +72,7 @@ export class RequestHandler {
         Logger.log('Headers:', headers);
 
         // 3. Process Body
-        let data: any = null;
+        let data: unknown = null;
         if (request.body) {
             const bodyType = request.body.type;
             Logger.log(`Processing Body Type: ${bodyType}`);
@@ -94,65 +94,39 @@ export class RequestHandler {
                 }
             } else if (bodyType === 'form-data') {
                 // Basic support: convert to object (JSON) as fallback since we don't have form-data package
-                const formData: Record<string, any> = {};
+                const formData: Record<string, unknown> = {};
                 if (Array.isArray(request.body.formData)) {
-                    request.body.formData.forEach((p: any) => {
+                    request.body.formData.forEach((p: KeyValueItem) => {
                         if (p.isEnabled && p.key) {
                             formData[substitute(p.key)] = substitute(p.value);
                         }
                     });
                 }
                 data = formData;
-            } else if (bodyType === 'graphql') {
-                data = {
-                    query: substitute(request.body.graphql?.query || ''),
-                    variables: request.body.graphql?.variables
-                        ? JSON.parse(substitute(request.body.graphql.variables || '{}'))
-                        : {}
-                };
+                // Axios will treat object as JSON by default, but we wanted form-data...
+                // Without 'form-data' package in Node, this is tricky.
+                // We will send as JSON for now or user should install form-data.
+                // Or we construct a boundary manually (too complex for now).
+                if (!headers['Content-Type'] && !headers['content-type']) {
+                    headers['Content-Type'] = 'application/json';
+                }
             }
         }
 
-        if (data) {
-            // Avoid logging huge bodies
-            const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
-            const logData = dataStr.length > 1000 ? dataStr.substring(0, 1000) + '... (truncated)' : dataStr;
-            Logger.log('Request Body:', logData);
-        }
-
         const config: AxiosRequestConfig = {
-            method: request.method,
+            method: request.method as string,
             url: finalUrl,
-            params: params,
             headers: headers,
+            params: params,
             data: data,
-            timeout: 60000, // 60s timeout
-            validateStatus: () => true, // Don't throw on error status
-            transformResponse: [
-                (data) => {
-                    try {
-                        // Try to parse JSON response
-                        if (typeof data === 'string') {
-                            return JSON.parse(data);
-                        }
-                        return data;
-                    } catch {
-                        return data;
-                    }
-                }
-            ]
+            validateStatus: () => true // Don't throw on error status
         };
 
         try {
-            Logger.log('Sending Axios Request...');
             const response: AxiosResponse = await axios(config);
-            const endTime = Date.now();
-            const duration = endTime - startTime;
+            const duration = Date.now() - startTime;
 
-            Logger.log(`Response Received. Status: ${response.status} ${response.statusText}`);
-            Logger.log(`Duration: ${duration}ms`);
-
-            // Calculate approximate size
+            // Calculate size (approx)
             const size = JSON.stringify(response.data).length + JSON.stringify(response.headers).length;
 
             return {
@@ -163,20 +137,17 @@ export class RequestHandler {
                 duration,
                 size
             };
-        } catch (error: any) {
-            const endTime = Date.now();
-            Logger.error('Request Failed. Error:', error.message);
-            if (error.response) {
-                Logger.error('Error Response Status:', error.response.status);
-                Logger.error('Error Response Data:', error.response.data);
-            }
+        } catch (error: unknown) {
+            const duration = Date.now() - startTime;
+            const err = error as { message: string; response?: AxiosResponse };
+            Logger.error(`Request Failed: ${err.message}`, error);
 
             return {
-                status: 0,
-                statusText: 'Error',
-                data: error.message || 'Unknown Error',
-                headers: {},
-                duration: endTime - startTime,
+                status: err.response?.status || 0,
+                statusText: err.response?.statusText || 'Error',
+                data: err.response?.data || { message: err.message },
+                headers: err.response?.headers || {},
+                duration,
                 size: 0
             };
         }

@@ -17,12 +17,13 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import HistoryIcon from '@mui/icons-material/History';
 import Editor from '@monaco-editor/react';
 import { useVsCodeTheme } from '../../hooks/useVsCodeTheme';
+import { ApiResponse } from '../../types';
 
 interface ResponseViewerProps {
-    response: any;
+    response: ApiResponse | null;
     loading: boolean;
-    history?: any[];
-    onSelectHistory?: (item: any) => void;
+    history?: ApiResponse[];
+    onSelectHistory?: (item: ApiResponse) => void;
 }
 
 export default function ResponseViewer({ response, loading, history = [], onSelectHistory }: ResponseViewerProps) {

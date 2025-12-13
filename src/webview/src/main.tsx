@@ -1,8 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
-import { ThemeProvider, CssBaseline } from '@mui/material';
-import { theme } from './theme';
+import { ThemeWrapper } from './components/ThemeWrapper';
 import './index.css';
 import { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
@@ -12,9 +11,8 @@ loader.config({ monaco });
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
+        <ThemeWrapper>
             <App />
-        </ThemeProvider>
+        </ThemeWrapper>
     </React.StrictMode>
 );

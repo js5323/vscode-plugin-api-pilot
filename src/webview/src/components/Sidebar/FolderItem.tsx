@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-    ListItem,
     ListItemButton,
     ListItemText,
     Collapse,
@@ -30,9 +29,10 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ShareIcon from '@mui/icons-material/Share';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import RequestItem from './RequestItem';
 import { getVsCodeApi } from '../../utils/vscode';
-import { CollectionFolder, ApiRequest } from '../../types';
+import { CollectionFolder, ApiRequest, ApiExample } from '../../types';
 
 const vscode = getVsCodeApi();
 
@@ -43,14 +43,16 @@ interface FolderItemProps {
     onAddFolder?: (folderId: string) => void;
     onRename?: (id: string, newName: string) => void;
     onDuplicate?: (id: string) => void;
+    onMove?: (id: string) => void;
     onRun?: (id: string) => void;
     onShare?: (id: string) => void;
     onAddExample?: (id: string) => void;
     onOpenRequest?: (request: ApiRequest) => void;
-    onOpenExample?: (example: any, parentRequest: ApiRequest) => void;
+    onOpenExample?: (example: ApiExample, parentRequest: ApiRequest) => void;
     onDeleteExample?: (exampleId: string, requestId: string) => void;
     onRenameExample?: (exampleId: string, requestId: string, newName: string) => void;
     onDuplicateExample?: (exampleId: string, requestId: string) => void;
+    onDrop?: (draggedId: string, targetFolderId: string) => void;
 }
 
 export default function FolderItem({
@@ -60,6 +62,7 @@ export default function FolderItem({
     onAddFolder,
     onRename,
     onDuplicate,
+    onMove,
     onRun,
     onShare,
     onAddExample,
@@ -67,13 +70,15 @@ export default function FolderItem({
     onOpenExample,
     onDeleteExample,
     onRenameExample,
-    onDuplicateExample
+    onDuplicateExample,
+    onDrop
 }: FolderItemProps) {
     const [open, setOpen] = useState(false);
     const [hover, setHover] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [renameDialogOpen, setRenameDialogOpen] = useState(false);
     const [newName, setNewName] = useState(folder.name);
+    const [isDragOver, setIsDragOver] = useState(false);
 
     const menuOpen = Boolean(anchorEl);
 
@@ -127,6 +132,14 @@ export default function FolderItem({
         handleMenuClose();
     };
 
+    const handleMove = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onMove) {
+            onMove(folder.id);
+        }
+        handleMenuClose();
+    };
+
     const handleRun = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (onRun) {
@@ -143,11 +156,68 @@ export default function FolderItem({
         handleMenuClose();
     };
 
+    const handleDragStart = (e: React.DragEvent) => {
+        e.stopPropagation();
+        e.dataTransfer.setData('application/json', JSON.stringify({ id: folder.id, type: 'folder' }));
+        e.dataTransfer.effectAllowed = 'move';
+        // Ensure only the item is shown as drag image
+        if (e.currentTarget) {
+            const target = e.currentTarget as HTMLElement;
+            // We can clone it or just use it. Using it directly is standard.
+            // If the user sees "whole list", maybe the browser is grabbing a parent?
+            // Explicitly setting it helps.
+            e.dataTransfer.setDragImage(target, 0, 0);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isDragOver) setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isDragOver) setIsDragOver(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+        const data = e.dataTransfer.getData('application/json');
+        if (data) {
+            try {
+                const { id } = JSON.parse(data);
+                // Prevent dropping folder into itself or its children is handled by backend logic usually,
+                // but we should avoid obvious self-drops here if possible.
+                // However, 'folder' object here doesn't know its parents.
+                // So we just pass it up.
+                if (id !== folder.id && onDrop) {
+                    onDrop(id, folder.id);
+                }
+            } catch (e) {
+                console.error('Invalid drag data', e);
+            }
+        }
+    };
+
     return (
         <>
             <ListItemButton
+                draggable
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 onClick={() => setOpen(!open)}
-                sx={{ py: 0.5 }}
+                sx={{
+                    py: 0.5,
+                    bgcolor: isDragOver ? 'action.hover' : 'transparent',
+                    border: isDragOver ? '1px dashed' : 'none',
+                    borderColor: 'primary.main'
+                }}
                 onMouseEnter={() => setHover(true)}
                 onMouseLeave={() => setHover(false)}
             >
@@ -234,6 +304,12 @@ export default function FolderItem({
                         </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Share</ListItemText>
                     </MenuItem>
+                    <MenuItem onClick={handleMove}>
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <DriveFileMoveIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
+                        <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Move</ListItemText>
+                    </MenuItem>
                     <Divider sx={{ my: 0.5 }} />
                     <MenuItem onClick={handleRenameOpen}>
                         <ListItemIcon sx={{ minWidth: 30 }}>
@@ -260,109 +336,91 @@ export default function FolderItem({
                         </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Duplicate</ListItemText>
                     </MenuItem>
+                    <Divider sx={{ my: 0.5 }} />
                     <MenuItem
-                        onClick={(e) => {
+                        onClick={() => {
                             if (onDelete) onDelete(folder.id);
-                            handleMenuClose(e);
+                            handleMenuClose();
                         }}
+                        sx={{ color: 'error.main' }}
                     >
-                        <ListItemIcon sx={{ minWidth: 30 }}>
-                            <DeleteIcon fontSize="small" color="error" sx={{ fontSize: '1.2rem' }} />
+                        <ListItemIcon sx={{ minWidth: 30, color: 'error.main' }}>
+                            <DeleteIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
                         </ListItemIcon>
-                        <ListItemText sx={{ color: 'error.main' }} primaryTypographyProps={{ fontSize: '0.75rem' }}>
-                            Delete
-                        </ListItemText>
+                        <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Delete</ListItemText>
                     </MenuItem>
                 </Menu>
             </ListItemButton>
 
-            <Dialog
-                open={renameDialogOpen}
-                onClose={() => setRenameDialogOpen(false)}
-                onClick={(e) => e.stopPropagation()}
-            >
+            <Collapse in={open} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ pl: 2, borderLeft: '1px solid', borderColor: 'divider' }}>
+                    {folder.children &&
+                        folder.children.map((item) =>
+                            item.type === 'folder' ? (
+                                <FolderItem
+                                    key={item.id}
+                                    folder={item as CollectionFolder}
+                                    onDelete={onDelete}
+                                    onAddRequest={onAddRequest}
+                                    onAddFolder={onAddFolder}
+                                    onRename={onRename}
+                                    onDuplicate={onDuplicate}
+                                    onMove={onMove}
+                                    onRun={onRun}
+                                    onShare={onShare}
+                                    onAddExample={onAddExample}
+                                    onOpenRequest={onOpenRequest}
+                                    onOpenExample={onOpenExample}
+                                    onDeleteExample={onDeleteExample}
+                                    onRenameExample={onRenameExample}
+                                    onDuplicateExample={onDuplicateExample}
+                                    onDrop={onDrop}
+                                />
+                            ) : (
+                                <RequestItem
+                                    key={item.id}
+                                    request={item as ApiRequest}
+                                    onClick={() => onOpenRequest && onOpenRequest(item as ApiRequest)}
+                                    onDelete={onDelete}
+                                    onRename={onRename}
+                                    onDuplicate={onDuplicate}
+                                    onMove={onMove}
+                                    onShare={onShare}
+                                    onAddExample={onAddExample}
+                                    onOpenExample={onOpenExample}
+                                    onDeleteExample={onDeleteExample}
+                                    onRenameExample={onRenameExample}
+                                    onDuplicateExample={onDuplicateExample}
+                                    onDrop={onDrop}
+                                />
+                            )
+                        )}
+                </List>
+            </Collapse>
+
+            <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)}>
                 <DialogTitle>Rename Folder</DialogTitle>
                 <DialogContent>
                     <TextField
                         autoFocus
                         margin="dense"
-                        label="Name"
+                        label="Folder Name"
                         type="text"
                         fullWidth
-                        variant="outlined"
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 handleRenameSubmit();
-                                e.preventDefault();
                             }
                         }}
                     />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleRenameSubmit}>Save</Button>
+                    <Button onClick={handleRenameSubmit}>Rename</Button>
                 </DialogActions>
             </Dialog>
-
-            <Collapse in={open} timeout="auto" unmountOnExit>
-                <Box sx={{ borderLeft: '1px solid', borderColor: 'divider', ml: 2, my: 0.5 }}>
-                    <List component="div" disablePadding>
-                        {folder.children.length > 0 ? (
-                            folder.children.map((child) => {
-                                if (child.type === 'folder') {
-                                    return (
-                                        <FolderItem
-                                            key={child.id}
-                                            folder={child as CollectionFolder}
-                                            onDelete={onDelete}
-                                            onAddRequest={onAddRequest}
-                                            onAddFolder={onAddFolder}
-                                            onRename={onRename}
-                                            onDuplicate={onDuplicate}
-                                            onRun={onRun}
-                                            onShare={onShare}
-                                            onAddExample={onAddExample}
-                                            onOpenRequest={onOpenRequest}
-                                            onOpenExample={onOpenExample}
-                                            onDeleteExample={onDeleteExample}
-                                            onRenameExample={onRenameExample}
-                                            onDuplicateExample={onDuplicateExample}
-                                        />
-                                    );
-                                }
-                                return (
-                                    <RequestItem
-                                        key={child.id}
-                                        request={child as ApiRequest}
-                                        onClick={() => {
-                                            if (onOpenRequest) onOpenRequest(child as ApiRequest);
-                                            else vscode.postMessage({ type: 'openRequest', payload: child });
-                                        }}
-                                        onDelete={onDelete}
-                                        onRename={onRename}
-                                        onDuplicate={onDuplicate}
-                                        onShare={onShare}
-                                        onAddExample={onAddExample}
-                                        onOpenExample={onOpenExample}
-                                        onDeleteExample={onDeleteExample}
-                                        onRenameExample={onRenameExample}
-                                        onDuplicateExample={onDuplicateExample}
-                                    />
-                                );
-                            })
-                        ) : (
-                            <ListItem>
-                                <ListItemText
-                                    secondary="Empty"
-                                    secondaryTypographyProps={{ fontSize: '0.75rem', fontStyle: 'italic', pl: 2 }}
-                                />
-                            </ListItem>
-                        )}
-                    </List>
-                </Box>
-            </Collapse>
         </>
     );
 }

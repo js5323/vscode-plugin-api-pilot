@@ -30,6 +30,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import { getVsCodeApi } from '../utils/vscode';
+import { Settings, Environment, KeyValueItem, ClientCertificate } from '../types';
 
 const vscode = getVsCodeApi();
 
@@ -58,7 +59,7 @@ function CustomTabPanel(props: TabPanelProps) {
 
 // --- Tab Content Components ---
 
-const GeneralTab = ({ settings, setSettings }: { settings: any; setSettings: (s: any) => void }) => (
+const GeneralTab = ({ settings, setSettings }: { settings: Settings; setSettings: (s: Settings) => void }) => (
     <Stack spacing={3}>
         <TextField
             label="Request Timeout (ms)"
@@ -116,7 +117,7 @@ const GeneralTab = ({ settings, setSettings }: { settings: any; setSettings: (s:
         <Divider />
 
         <Typography variant="subtitle2">Default Request Headers</Typography>
-        {settings.general.defaultHeaders.map((header: any, index: number) => (
+        {settings.general.defaultHeaders.map((header: KeyValueItem, index: number) => (
             <Stack direction="row" spacing={1} key={index}>
                 <TextField
                     label="Key"
@@ -142,7 +143,9 @@ const GeneralTab = ({ settings, setSettings }: { settings: any; setSettings: (s:
                 />
                 <IconButton
                     onClick={() => {
-                        const newHeaders = settings.general.defaultHeaders.filter((_: any, i: number) => i !== index);
+                        const newHeaders = settings.general.defaultHeaders.filter(
+                            (_: unknown, i: number) => i !== index
+                        );
                         setSettings({ ...settings, general: { ...settings.general, defaultHeaders: newHeaders } });
                     }}
                 >
@@ -175,7 +178,7 @@ const EnvironmentTab = ({
 }: {
     defaultEnvId: string;
     setDefaultEnvId: (id: string) => void;
-    environments: any[];
+    environments: Environment[];
 }) => (
     <Stack spacing={3}>
         <FormControl fullWidth>
@@ -231,7 +234,7 @@ const EnvironmentTab = ({
     </Stack>
 );
 
-const ProxyTab = ({ settings, setSettings }: { settings: any; setSettings: (s: any) => void }) => (
+const ProxyTab = ({ settings, setSettings }: { settings: Settings; setSettings: (s: Settings) => void }) => (
     <Stack spacing={3}>
         <FormControlLabel
             control={
@@ -355,7 +358,7 @@ const ProxyTab = ({ settings, setSettings }: { settings: any; setSettings: (s: a
     </Stack>
 );
 
-const CertificatesTab = ({ settings, setSettings }: { settings: any; setSettings: (s: any) => void }) => {
+const CertificatesTab = ({ settings, setSettings }: { settings: Settings; setSettings: (s: Settings) => void }) => {
     const [clientCertOpen, setClientCertOpen] = useState(false);
     const [newClientCert, setNewClientCert] = useState({
         host: '',
@@ -408,7 +411,9 @@ const CertificatesTab = ({ settings, setSettings }: { settings: any; setSettings
                                 <IconButton
                                     edge="end"
                                     onClick={() => {
-                                        const newCa = settings.certificates.ca.filter((_: any, i: number) => i !== idx);
+                                        const newCa = settings.certificates.ca.filter(
+                                            (_: unknown, i: number) => i !== idx
+                                        );
                                         setSettings({
                                             ...settings,
                                             certificates: { ...settings.certificates, ca: newCa }
@@ -441,7 +446,7 @@ const CertificatesTab = ({ settings, setSettings }: { settings: any; setSettings
                     Add Client Certificate
                 </Button>
                 <List>
-                    {settings.certificates.client.map((cert: any, idx: number) => (
+                    {settings.certificates.client.map((cert: ClientCertificate, idx: number) => (
                         <ListItem key={idx} divider>
                             <ListItemText
                                 primary={cert.host}
@@ -452,7 +457,7 @@ const CertificatesTab = ({ settings, setSettings }: { settings: any; setSettings
                                     edge="end"
                                     onClick={() => {
                                         const newClient = settings.certificates.client.filter(
-                                            (_: any, i: number) => i !== idx
+                                            (_: unknown, i: number) => i !== idx
                                         );
                                         setSettings({
                                             ...settings,
@@ -587,13 +592,13 @@ const AboutTab = () => (
 
 export default function SettingsPage() {
     const [value, setValue] = useState(0);
-    const [settings, setSettings] = useState({
+    const [settings, setSettings] = useState<Settings>({
         general: {
             timeout: 0,
-            defaultHeaders: [] as { key: string; value: string }[],
-            sslVerification: true,
             maxResponseSize: 0,
-            autoSave: true
+            sslVerification: true,
+            autoSave: true,
+            defaultHeaders: [] as KeyValueItem[]
         },
         proxy: {
             useSystemProxy: true,
@@ -607,11 +612,11 @@ export default function SettingsPage() {
         },
         certificates: {
             ca: [] as string[],
-            client: [] as any[]
+            client: [] as ClientCertificate[]
         }
     });
 
-    const [environments, setEnvironments] = useState<any[]>([]);
+    const [environments, setEnvironments] = useState<Environment[]>([]);
     const [defaultEnvId, setDefaultEnvId] = useState<string>('');
 
     useEffect(() => {
@@ -620,8 +625,8 @@ export default function SettingsPage() {
         const handleMessage = (event: MessageEvent) => {
             const msg = event.data;
             if (msg.type === 'updateSettings') {
-                setSettings(msg.payload.settings);
-                setEnvironments(msg.payload.environments);
+                setSettings(msg.payload.settings as Settings);
+                setEnvironments(msg.payload.environments as Environment[]);
                 setDefaultEnvId(msg.payload.defaultEnvId || '');
             } else if (msg.type === 'fileSelected') {
                 const { payload, context } = msg;

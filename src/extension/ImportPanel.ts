@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Importer } from './utils/Importer';
 import { Logger } from './utils/Logger';
+import { CollectionItem, CollectionFolder } from '../../webview/src/types';
 
 export class ImportPanel {
     public static currentPanel: ImportPanel | undefined;
@@ -75,8 +76,11 @@ export class ImportPanel {
                             const { collectionId, newCollectionName, content } = message.payload;
                             const importedItems = Importer.parse(content);
 
-                            const collections = this._context.globalState.get('apipilot.collections', []) as any[];
-                            let targetCollection: any;
+                            const collections = this._context.globalState.get<CollectionItem[]>(
+                                'apipilot.collections',
+                                []
+                            );
+                            let targetCollection: CollectionItem | undefined;
 
                             if (newCollectionName) {
                                 targetCollection = {
@@ -87,14 +91,15 @@ export class ImportPanel {
                                 };
                                 collections.push(targetCollection);
                             } else {
-                                targetCollection = collections.find((c: any) => c.id === collectionId);
+                                targetCollection = collections.find((c: CollectionItem) => c.id === collectionId);
                             }
 
                             if (targetCollection) {
-                                if (!targetCollection.children) {
-                                    targetCollection.children = [];
+                                const targetFolder = targetCollection as CollectionFolder;
+                                if (!targetFolder.children) {
+                                    targetFolder.children = [];
                                 }
-                                targetCollection.children.push(...importedItems);
+                                targetFolder.children.push(...importedItems);
 
                                 await this._context.globalState.update('apipilot.collections', collections);
 
@@ -107,11 +112,12 @@ export class ImportPanel {
                             } else {
                                 throw new Error('Target collection not found');
                             }
-                        } catch (e: any) {
-                            Logger.error(`Import failed: ${e.message}`);
+                        } catch (e: unknown) {
+                            const errorMessage = e instanceof Error ? e.message : String(e);
+                            Logger.error(`Import failed: ${errorMessage}`);
                             this._panel.webview.postMessage({
                                 type: 'importError',
-                                message: e.message
+                                message: errorMessage
                             });
                         }
                         break;

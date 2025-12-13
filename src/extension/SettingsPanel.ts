@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Logger } from './utils/Logger';
+import { Environment } from '../webview/src/types';
 
 export class SettingsPanel {
     public static currentPanel: SettingsPanel | undefined;
@@ -47,7 +47,7 @@ export class SettingsPanel {
                         break;
                     }
                     case 'getSettings': {
-                        const settings: any = this._context.globalState.get('apipilot.settings', {
+                        const settings: unknown = this._context.globalState.get('apipilot.settings', {
                             general: {
                                 timeout: 0,
                                 defaultHeaders: [],
@@ -72,8 +72,9 @@ export class SettingsPanel {
                         });
 
                         // Ensure defaults are populated if user has partial settings
-                        if (!settings.general) settings.general = {};
-                        if (settings.general.autoSave === undefined) settings.general.autoSave = true;
+                        const typedSettings = settings as { general?: { autoSave?: boolean } };
+                        if (!typedSettings.general) typedSettings.general = {};
+                        if (typedSettings.general.autoSave === undefined) typedSettings.general.autoSave = true;
 
                         const environments = this._context.globalState.get('apipilot.environments', []);
                         const defaultEnvId = this._context.globalState.get('apipilot.defaultEnvId', '');
@@ -105,8 +106,11 @@ export class SettingsPanel {
                         // Let's use a simple input for name and create it
                         const name = await vscode.window.showInputBox({ prompt: 'Enter environment name' });
                         if (name) {
-                            const environments = this._context.globalState.get<any[]>('apipilot.environments', []);
-                            const newEnv = {
+                            const environments = this._context.globalState.get<Environment[]>(
+                                'apipilot.environments',
+                                []
+                            );
+                            const newEnv: Environment = {
                                 id: Date.now().toString(),
                                 name,
                                 variables: []
@@ -128,7 +132,7 @@ export class SettingsPanel {
                     }
                     case 'deleteEnvironment': {
                         const envId = message.payload;
-                        const environments = this._context.globalState.get<any[]>('apipilot.environments', []);
+                        const environments = this._context.globalState.get<Environment[]>('apipilot.environments', []);
                         const newEnvs = environments.filter((e) => e.id !== envId);
                         await this._context.globalState.update('apipilot.environments', newEnvs);
 
@@ -175,6 +179,34 @@ export class SettingsPanel {
                         }
                         break;
                     }
+                    case 'importData': {
+                        // Forward to sidebar or handle here?
+                        // For now let's say we handled it
+                        vscode.window.showInformationMessage('Import feature coming soon in Settings');
+                        break;
+                    }
+                    case 'exportData': {
+                        try {
+                            const collections = this._context.globalState.get<unknown[]>('apipilot.collections', []);
+                            const exportData = JSON.stringify(collections, null, 2);
+
+                            // Ask user where to save
+                            const uri = await vscode.window.showSaveDialog({
+                                filters: {
+                                    JSON: ['json']
+                                }
+                            });
+
+                            if (uri) {
+                                await vscode.workspace.fs.writeFile(uri, Buffer.from(exportData));
+                                vscode.window.showInformationMessage('Export successful');
+                            }
+                        } catch (e: unknown) {
+                            const errorMessage = e instanceof Error ? e.message : String(e);
+                            vscode.window.showErrorMessage(`Export failed: ${errorMessage}`);
+                        }
+                        break;
+                    }
                 }
             },
             null,
@@ -194,7 +226,7 @@ export class SettingsPanel {
     }
 
     public refresh() {
-        const settings: any = this._context.globalState.get('apipilot.settings', {
+        const settings = this._context.globalState.get('apipilot.settings', {
             general: {
                 timeout: 0,
                 defaultHeaders: [],
@@ -216,7 +248,7 @@ export class SettingsPanel {
                 ca: [],
                 client: []
             }
-        });
+        }) as { general?: { autoSave?: boolean } };
 
         // Ensure defaults are populated if user has partial settings
         if (!settings.general) settings.general = {};
@@ -253,72 +285,34 @@ export class SettingsPanel {
                 .toString();
         }
 
-        const nonce = getNonce();
+        const nonce = this.getNonce();
 
         const csp = isDev
             ? `default-src 'none'; connect-src ${webview.cspSource} https: http://localhost:5173 ws://localhost:5173 data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' http://localhost:5173; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' http://localhost:5173; font-src ${webview.cspSource} https: data:;`
             : `default-src 'none'; connect-src ${webview.cspSource} https: data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval'; font-src ${webview.cspSource} https: data:;`;
 
         return `<!DOCTYPE html>
-			<html lang="en">
-			<head>
-				<meta charset="UTF-8">
-				<meta http-equiv="Content-Security-Policy" content="${csp}">
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				${!isDev ? `<link href="${styleResetUri}" rel="stylesheet">` : ''}
-				<title>ApiPilot Settings</title>
-                <script nonce="${nonce}">
-                    window.viewType = 'settings';
-                </script>
-                 <script nonce="${nonce}">
-                    // Acquire API once and store globally
-                    try {
-                        const vscode = acquireVsCodeApi();
-                        window.vscode = vscode;
-                    } catch (e) {
-                        console.error("Failed to acquire vscode api", e);
-                    }
-                    const vscode = window.vscode;
-
-                     // Override console.log
-                    const originalLog = console.log;
-                    console.log = function(...args) {
-                        originalLog.apply(console, args);
-                        if (vscode) {
-                            vscode.postMessage({ type: 'log', value: args.join(' ') });
-                        }
-                    };
-                </script>
-                ${
-                    isDev
-                        ? `
-                    <script type="module" nonce="${nonce}">
-                        import RefreshRuntime from "http://localhost:5173/@react-refresh"
-                        RefreshRuntime.injectIntoGlobalHook(window)
-                        window.$RefreshReg$ = () => {}
-                        window.$RefreshSig$ = () => (type) => type
-                        window.__vite_plugin_react_preamble_installed__ = true
-                    </script>
-                    <script type="module" nonce="${nonce}" src="http://localhost:5173/@vite/client"></script>
-                    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
-                `
-                        : `
-                    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
-                `
-                }
-			</head>
-			<body>
-				<div id="root"></div>
-			</body>
-			</html>`;
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta http-equiv="Content-Security-Policy" content="${csp}">
+                <link href="${styleResetUri}" rel="stylesheet">
+                <title>Settings</title>
+            </head>
+            <body>
+                <div id="root" data-page="settings"></div>
+                <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+            </body>
+            </html>`;
     }
-}
 
-function getNonce() {
-    let text = '';
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 32; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    private getNonce() {
+        let text = '';
+        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        for (let i = 0; i < 32; i++) {
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        return text;
     }
-    return text;
 }

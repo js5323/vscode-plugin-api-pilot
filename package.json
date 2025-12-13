@@ -48,10 +48,11 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
-        "lint": "eslint src --ext ts",
+        "lint": "eslint src",
         "test": "node ./out/test/runTest.js",
         "build:webview": "cd src/webview && npm install && npm run build",
         "dev:webview": "cd src/webview && npm run dev",
+        "package": "vsce package",
         "prepare": "husky"
     },
     "devDependencies": {

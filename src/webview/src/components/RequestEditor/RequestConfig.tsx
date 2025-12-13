@@ -11,7 +11,7 @@ import { useVsCodeTheme } from '../../hooks/useVsCodeTheme';
 
 interface RequestConfigProps {
     request: ApiRequest;
-    onChange: (field: keyof ApiRequest, value: any) => void;
+    onChange: (field: keyof ApiRequest, value: unknown) => void;
     layout: 'vertical' | 'horizontal';
     onLayoutChange: () => void;
 }

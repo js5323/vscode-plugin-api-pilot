@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Paper, TextField, Button, Select, MenuItem, FormControl, IconButton } from '@mui/material';
+import { Box, Paper, TextField, Button, Select, MenuItem, FormControl } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { getVsCodeApi } from '../utils/vscode';
-import { ApiRequest, ApiRequestBody } from '../types';
+import { ApiRequest, ApiRequestBody, ApiResponse } from '../types';
 import RequestConfig from '../components/RequestEditor/RequestConfig';
 import ResponseViewer from '../components/RequestEditor/ResponseViewer';
 import RequestHeader from '../components/RequestEditor/RequestHeader';
@@ -10,8 +10,8 @@ import RightSidebar from '../components/RequestEditor/RightSidebar';
 
 const vscode = getVsCodeApi();
 
-const migrateRequest = (data: any): ApiRequest => {
-    if (!data)
+const migrateRequest = (data: unknown): ApiRequest => {
+    if (!data || typeof data !== 'object')
         return {
             id: '',
             name: 'New Request',
@@ -23,11 +23,12 @@ const migrateRequest = (data: any): ApiRequest => {
             body: { type: 'none' }
         };
 
-    const newData = { ...data };
+    const record = data as Record<string, unknown>;
+    const newData: Partial<ApiRequest> & Record<string, unknown> = { ...record };
 
     // Migrate params -> queryParams
-    if (data.params && !Array.isArray(data.params) && !data.queryParams) {
-        newData.queryParams = Object.entries(data.params).map(([key, value]) => ({
+    if (record.params && !Array.isArray(record.params) && !record.queryParams) {
+        newData.queryParams = Object.entries(record.params as Record<string, unknown>).map(([key, value]) => ({
             id: Math.random().toString(),
             key,
             value: String(value),
@@ -37,8 +38,8 @@ const migrateRequest = (data: any): ApiRequest => {
     }
 
     // Migrate headers (record to array)
-    if (data.headers && !Array.isArray(data.headers)) {
-        newData.headers = Object.entries(data.headers).map(([key, value]) => ({
+    if (record.headers && !Array.isArray(record.headers)) {
+        newData.headers = Object.entries(record.headers as Record<string, unknown>).map(([key, value]) => ({
             id: Math.random().toString(),
             key,
             value: String(value),
@@ -47,11 +48,14 @@ const migrateRequest = (data: any): ApiRequest => {
     }
 
     // Migrate body
-    if (data.body && (typeof data.body === 'string' || (typeof data.body === 'object' && !data.body.type))) {
-        if (typeof data.body === 'string') {
-            newData.body = { type: 'raw', raw: data.body };
+    if (
+        record.body &&
+        (typeof record.body === 'string' || (typeof record.body === 'object' && !('type' in record.body)))
+    ) {
+        if (typeof record.body === 'string') {
+            newData.body = { type: 'raw', raw: record.body };
         } else {
-            newData.body = { type: 'raw', raw: JSON.stringify(data.body, null, 2) };
+            newData.body = { type: 'raw', raw: JSON.stringify(record.body, null, 2) };
         }
     }
 
@@ -65,15 +69,17 @@ const migrateRequest = (data: any): ApiRequest => {
 };
 
 export default function RequestEditor() {
-    const initialData = (window as any).initialData;
+    const initialData = (window as unknown as { initialData?: unknown }).initialData;
     const [request, setRequest] = useState<ApiRequest>(migrateRequest(initialData));
-    const [response, setResponse] = useState<any>(null);
+    const [response, setResponse] = useState<ApiResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [layout, setLayout] = useState<'vertical' | 'horizontal'>('vertical');
     const [splitPos, setSplitPos] = useState(50); // percentage
     const containerRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
-    const [responseHistory, setResponseHistory] = useState<any[]>(initialData?.responseHistory || []);
+    const [responseHistory, setResponseHistory] = useState<ApiResponse[]>(
+        (initialData as Partial<ApiRequest>)?.responseHistory || []
+    );
 
     const handleMouseDown = () => {
         isDragging.current = true;
@@ -118,7 +124,7 @@ export default function RequestEditor() {
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message.type === 'executeResponse') {
-                const newResponse = message.payload;
+                const newResponse = message.payload as ApiResponse;
                 setResponse(newResponse);
                 setLoading(false);
                 setResponseHistory((prev) => {
@@ -170,7 +176,7 @@ export default function RequestEditor() {
         vscode.postMessage({ type: 'saveRequest', payload: { ...request, responseHistory } });
     };
 
-    const handleChange = (field: keyof ApiRequest, value: any) => {
+    const handleChange = (field: keyof ApiRequest, value: unknown) => {
         setRequest((prev) => ({ ...prev, [field]: value }));
     };
 

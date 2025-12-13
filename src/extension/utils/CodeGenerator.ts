@@ -10,16 +10,16 @@ export class CodeGenerator {
                 case 'curl':
                     return curl;
                 case 'javascript': // Fetch
-                    // @ts-ignore
+                    // @ts-expect-error curlconverter types issue
                     return curlconverter.toJavaScript(curl);
                 case 'javascript-xhr':
-                    // @ts-ignore
+                    // @ts-expect-error curlconverter types issue
                     return curlconverter.toJavaScriptXHR(curl);
                 case 'axios':
-                    // @ts-ignore
+                    // @ts-expect-error curlconverter types issue
                     return curlconverter.toNodeAxios(curl);
                 case 'node': // NodeJs-request
-                    // @ts-ignore
+                    // @ts-expect-error curlconverter types issue
                     return curlconverter.toNodeRequest(curl);
                 default:
                     return 'Unsupported language';

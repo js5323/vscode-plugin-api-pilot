@@ -9,7 +9,7 @@ export class Logger {
         }
     }
 
-    public static log(message: string, data?: any) {
+    public static log(message: string, data?: unknown) {
         if (!this._outputChannel) {
             console.log(message, data);
             return;
@@ -24,6 +24,7 @@ export class Logger {
                 try {
                     logMessage += `\n${JSON.stringify(data, null, 2)}`;
                 } catch (e) {
+                    console.error('Logging error:', e);
                     logMessage += `\n[Circular or Non-Serializable Data]`;
                 }
             } else {
@@ -34,7 +35,7 @@ export class Logger {
         this._outputChannel.appendLine(logMessage);
     }
 
-    public static error(message: string, error?: any) {
+    public static error(message: string, error?: unknown) {
         if (!this._outputChannel) {
             console.error(message, error);
             return;
