@@ -1,4 +1,5 @@
 import * as curlconverter from 'curlconverter';
+import * as yaml from 'js-yaml';
 
 const uuidv4 = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -24,12 +25,18 @@ export class Importer {
         } catch (e) {
             // Check if it might be YAML
             // Try to match "openapi: 3.x.x" or "swagger: '2.0'"
-            if (/^\s*(openapi|swagger)\s*:/i.test(content) || /^\s*---\s*$/m.test(content)) {
-                throw new Error(
-                    'YAML format is not currently supported. Please convert your OpenAPI/Swagger definition to JSON.'
-                );
+            try {
+                const parsedYaml = yaml.load(content);
+                if (typeof parsedYaml === 'object' && parsedYaml !== null) {
+                    const apiDef = parsedYaml as any;
+                    if (apiDef.openapi || apiDef.swagger) {
+                        return this.parseOpenApi(apiDef);
+                    }
+                }
+            } catch (yamlErr) {
+                // Not YAML
             }
-            // Not JSON, continue to cURL
+            // Not JSON or YAML, continue to cURL
         }
 
         // Try cURL

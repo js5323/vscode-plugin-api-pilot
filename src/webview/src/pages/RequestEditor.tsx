@@ -1,26 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-    Box,
-    Paper,
-    TextField,
-    Button,
-    Select,
-    MenuItem,
-    FormControl,
-    Tooltip,
-    IconButton,
-    Breadcrumbs,
-    Typography
-} from '@mui/material';
+import { Box, Paper, TextField, Button, Select, MenuItem, FormControl, IconButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import SaveIcon from '@mui/icons-material/Save';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import EditIcon from '@mui/icons-material/Edit';
 import { getVsCodeApi } from '../utils/vscode';
 import { ApiRequest, ApiRequestBody } from '../types';
 import RequestConfig from '../components/RequestEditor/RequestConfig';
 import ResponseViewer from '../components/RequestEditor/ResponseViewer';
+import RequestHeader from '../components/RequestEditor/RequestHeader';
+import RightSidebar from '../components/RequestEditor/RightSidebar';
 
 const vscode = getVsCodeApi();
 
@@ -87,9 +73,7 @@ export default function RequestEditor() {
     const [splitPos, setSplitPos] = useState(50); // percentage
     const containerRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
-    const [settings, setSettings] = useState<any>({ general: { autoSave: true } });
     const [responseHistory, setResponseHistory] = useState<any[]>(initialData?.responseHistory || []);
-    const [isEditingName, setIsEditingName] = useState(false);
 
     const handleMouseDown = () => {
         isDragging.current = true;
@@ -129,7 +113,7 @@ export default function RequestEditor() {
     };
 
     useEffect(() => {
-        vscode.postMessage({ type: 'getSettings' });
+        // vscode.postMessage({ type: 'getSettings' }); // Settings not needed for now if no auto-save
 
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
@@ -143,8 +127,6 @@ export default function RequestEditor() {
                 });
             } else if (message.type === 'updateRequest') {
                 setRequest(migrateRequest(message.payload));
-            } else if (message.type === 'updateSettings') {
-                setSettings(message.payload);
             } else if (message.type === 'fileSelected') {
                 const context = message.context;
                 if (context && context.type === 'formData' && context.rowId) {
@@ -178,16 +160,6 @@ export default function RequestEditor() {
         return () => window.removeEventListener('message', handleMessage);
     }, []);
 
-    // Auto Save
-    useEffect(() => {
-        if (settings.general?.autoSave) {
-            const timer = setTimeout(() => {
-                vscode.postMessage({ type: 'saveRequest', payload: { ...request, responseHistory } });
-            }, 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [request, settings, responseHistory]);
-
     const handleSend = () => {
         setResponse(null);
         setLoading(true);
@@ -202,51 +174,16 @@ export default function RequestEditor() {
         setRequest((prev) => ({ ...prev, [field]: value }));
     };
 
+    const handleNameChange = (name: string) => {
+        const newRequest = { ...request, name };
+        setRequest(newRequest);
+        vscode.postMessage({ type: 'updateTitle', value: name });
+        vscode.postMessage({ type: 'saveRequest', payload: { ...newRequest, responseHistory } });
+    };
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-            {/* Breadcrumbs */}
-            <Box sx={{ px: 2, py: 1, bgcolor: 'background.default' }}>
-                <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
-                    {(request._folderPath || []).map((folder: any) => (
-                        <Typography key={folder.id} color="text.secondary" variant="body2">
-                            {folder.name}
-                        </Typography>
-                    ))}
-                    {isEditingName ? (
-                        <TextField
-                            value={request.name}
-                            onChange={(e) => handleChange('name', e.target.value)}
-                            onBlur={() => setIsEditingName(false)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') setIsEditingName(false);
-                            }}
-                            size="small"
-                            variant="standard"
-                            autoFocus
-                            sx={{ minWidth: 150 }}
-                            inputProps={{ style: { fontSize: '0.875rem', fontWeight: 'bold' } }}
-                        />
-                    ) : (
-                        <Box
-                            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-                            onClick={() => setIsEditingName(true)}
-                        >
-                            <Typography color="text.primary" variant="body2" fontWeight="bold">
-                                {request.name}
-                            </Typography>
-                            <EditIcon
-                                sx={{
-                                    ml: 1,
-                                    fontSize: 16,
-                                    color: 'text.secondary',
-                                    opacity: 0.5,
-                                    '&:hover': { opacity: 1 }
-                                }}
-                            />
-                        </Box>
-                    )}
-                </Breadcrumbs>
-            </Box>
+            <RequestHeader request={request} onNameChange={handleNameChange} onSave={handleSave} />
 
             {/* Header / URL Bar */}
             <Paper square sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -270,11 +207,6 @@ export default function RequestEditor() {
                     value={request.url}
                     onChange={(e) => handleChange('url', e.target.value)}
                 />
-                <Tooltip title="Use {{variable}} to reference environment variables (e.g. use {{var1}} for var1 in active env1)">
-                    <IconButton size="small">
-                        <HelpOutlineIcon fontSize="small" />
-                    </IconButton>
-                </Tooltip>
                 <Button
                     variant="contained"
                     size="medium"
@@ -285,76 +217,70 @@ export default function RequestEditor() {
                 >
                     Send
                 </Button>
-                {!settings.general?.autoSave && (
-                    <Button
-                        size="medium"
-                        sx={{ padding: '8px 16px' }}
-                        variant="outlined"
-                        startIcon={<SaveIcon />}
-                        onClick={handleSave}
-                    >
-                        Save
-                    </Button>
-                )}
             </Paper>
 
             {/* Main Content Area */}
-            <Box
-                ref={containerRef}
-                sx={{
-                    display: 'flex',
-                    flexDirection: layout === 'vertical' ? 'column' : 'row',
-                    flexGrow: 1,
-                    overflow: 'hidden'
-                }}
-            >
-                {/* Request Config */}
+            <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
                 <Box
+                    ref={containerRef}
                     sx={{
-                        height: layout === 'vertical' ? `${splitPos}%` : '100%',
-                        width: layout === 'horizontal' ? `${splitPos}%` : '100%',
+                        display: 'flex',
+                        flexDirection: layout === 'vertical' ? 'column' : 'row',
+                        flexGrow: 1,
                         overflow: 'hidden'
                     }}
                 >
-                    <RequestConfig
-                        request={request}
-                        onChange={handleChange}
-                        layout={layout}
-                        onLayoutChange={toggleLayout}
+                    {/* Request Config */}
+                    <Box
+                        sx={{
+                            height: layout === 'vertical' ? `${splitPos}%` : '100%',
+                            width: layout === 'horizontal' ? `${splitPos}%` : '100%',
+                            overflow: 'hidden'
+                        }}
+                    >
+                        <RequestConfig
+                            request={request}
+                            onChange={handleChange}
+                            layout={layout}
+                            onLayoutChange={toggleLayout}
+                        />
+                    </Box>
+
+                    {/* Separator */}
+                    <Box
+                        onMouseDown={handleMouseDown}
+                        sx={{
+                            cursor: layout === 'vertical' ? 'row-resize' : 'col-resize',
+                            height: layout === 'vertical' ? '4px' : '100%',
+                            width: layout === 'horizontal' ? '4px' : '100%',
+                            bgcolor: 'divider',
+                            zIndex: 1,
+                            transition: 'background-color 0.2s',
+                            '&:hover': {
+                                bgcolor: 'primary.main'
+                            }
+                        }}
                     />
+
+                    {/* Response */}
+                    <Box
+                        sx={{
+                            height: layout === 'vertical' ? `${100 - splitPos}%` : '100%',
+                            width: layout === 'horizontal' ? `${100 - splitPos}%` : '100%',
+                            overflow: 'hidden'
+                        }}
+                    >
+                        <ResponseViewer
+                            response={response}
+                            loading={loading}
+                            history={responseHistory}
+                            onSelectHistory={(item) => setResponse(item)}
+                        />
+                    </Box>
                 </Box>
 
-                {/* Separator */}
-                <Box
-                    onMouseDown={handleMouseDown}
-                    sx={{
-                        cursor: layout === 'vertical' ? 'row-resize' : 'col-resize',
-                        height: layout === 'vertical' ? '4px' : '100%',
-                        width: layout === 'horizontal' ? '4px' : '100%',
-                        bgcolor: 'divider',
-                        zIndex: 1,
-                        transition: 'background-color 0.2s',
-                        '&:hover': {
-                            bgcolor: 'primary.main'
-                        }
-                    }}
-                />
-
-                {/* Response */}
-                <Box
-                    sx={{
-                        height: layout === 'vertical' ? `${100 - splitPos}%` : '100%',
-                        width: layout === 'horizontal' ? `${100 - splitPos}%` : '100%',
-                        overflow: 'hidden'
-                    }}
-                >
-                    <ResponseViewer
-                        response={response}
-                        loading={loading}
-                        history={responseHistory}
-                        onSelectHistory={(item) => setResponse(item)}
-                    />
-                </Box>
+                {/* Right Sidebar */}
+                <RightSidebar request={request} />
             </Box>
         </Box>
     );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box, Tabs, Tab, Tooltip, IconButton } from '@mui/material';
 import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
 import HorizontalSplitIcon from '@mui/icons-material/HorizontalSplit';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Editor from '@monaco-editor/react';
 import { ApiRequest, ApiRequestBody, KeyValueItem } from '../../types';
 import KeyValueTable from './KeyValueTable';
@@ -115,6 +116,11 @@ export default function RequestConfig({ request, onChange, layout, onLayoutChang
                     {renderTab('Headers', 2)}
                     {renderTab('Body', 3)}
                 </Tabs>
+                <Tooltip title="Use {{variable}} to reference environment variables">
+                    <IconButton size="small" sx={{ mr: 1 }}>
+                        <HelpOutlineIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
                 <Tooltip title={`Switch to ${layout === 'vertical' ? 'Horizontal' : 'Vertical'} Layout`}>
                     <IconButton onClick={onLayoutChange} size="small" sx={{ mr: 1 }}>
                         {layout === 'vertical' ? <HorizontalSplitIcon /> : <VerticalSplitIcon />}

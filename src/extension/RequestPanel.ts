@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { RequestHandler } from './RequestHandler';
 import { Logger } from './utils/Logger';
+import { CodeGenerator } from './utils/CodeGenerator';
 import { ApiRequest, CollectionItem, CollectionFolder, Environment } from '../webview/src/types';
 
 export class RequestPanel {
@@ -93,6 +94,19 @@ export class RequestPanel {
                                 }
                             });
                         }
+                        break;
+                    }
+                    case 'updateTitle': {
+                        this._panel.title = message.value;
+                        break;
+                    }
+                    case 'generateCodeSnippet': {
+                        const { request, language } = message.payload;
+                        const snippet = CodeGenerator.generate(request, language);
+                        this._panel.webview.postMessage({
+                            type: 'codeSnippetGenerated',
+                            payload: snippet
+                        });
                         break;
                     }
                     case 'onInfo': {

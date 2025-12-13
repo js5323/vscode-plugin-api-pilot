@@ -7,7 +7,9 @@ import { ImportPanel } from './ImportPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { Logger } from './utils/Logger';
 import { Importer } from './utils/Importer';
-import { HistoryItem } from '../webview/src/types';
+import { Exporter } from './utils/Exporter';
+import { CodeGenerator } from './utils/CodeGenerator';
+import { HistoryItem, ApiRequest } from '../webview/src/types';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
@@ -97,6 +99,34 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     webviewView.webview.postMessage({
                         type: 'updateHistory',
                         payload: []
+                    });
+                    break;
+                }
+                case 'exportCollection': {
+                    const collection = data.payload;
+                    try {
+                        const yamlContent = Exporter.exportToSwagger(collection);
+                        const uri = await vscode.window.showSaveDialog({
+                            filters: {
+                                YAML: ['yaml', 'yml']
+                            },
+                            saveLabel: 'Export Swagger'
+                        });
+                        if (uri) {
+                            await vscode.workspace.fs.writeFile(uri, new Uint8Array(Buffer.from(yamlContent, 'utf8')));
+                            vscode.window.showInformationMessage('Collection exported successfully!');
+                        }
+                    } catch (e) {
+                        vscode.window.showErrorMessage(`Export failed: ${e}`);
+                    }
+                    break;
+                }
+                case 'generateCodeSnippet': {
+                    const { request, language } = data.payload;
+                    const snippet = CodeGenerator.generate(request, language);
+                    webviewView.webview.postMessage({
+                        type: 'codeSnippetGenerated',
+                        payload: snippet
                     });
                     break;
                 }

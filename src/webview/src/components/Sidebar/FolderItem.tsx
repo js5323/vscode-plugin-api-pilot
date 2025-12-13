@@ -29,6 +29,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ShareIcon from '@mui/icons-material/Share';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import RequestItem from './RequestItem';
 import { getVsCodeApi } from '../../utils/vscode';
 import { CollectionFolder, ApiRequest } from '../../types';
@@ -239,6 +240,19 @@ export default function FolderItem({
                             <EditIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
                         </ListItemIcon>
                         <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>Rename</ListItemText>
+                    </MenuItem>
+                    <MenuItem
+                        onClick={(e) => {
+                            vscode.postMessage({ type: 'exportCollection', payload: folder });
+                            handleMenuClose(e);
+                        }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                            <FileDownloadIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
+                        </ListItemIcon>
+                        <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>
+                            Export to Swagger YAML
+                        </ListItemText>
                     </MenuItem>
                     <MenuItem onClick={handleDuplicate}>
                         <ListItemIcon sx={{ minWidth: 30 }}>
