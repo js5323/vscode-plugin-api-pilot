@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { RequestHandler } from './RequestHandler';
 import { Logger } from './utils/Logger';
-import { ApiRequest, CollectionItem } from '../shared/types';
+import { ApiRequest, CollectionItem, Environment } from '../shared/types';
 
 export class RequestPanel {
     public static currentPanels = new Map<string, RequestPanel>();
