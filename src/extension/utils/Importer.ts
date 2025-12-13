@@ -7,7 +7,7 @@ import {
     ApiRequestBody,
     ApiExample,
     RequestMethod
-} from '../../webview/src/types';
+} from '../../shared/types';
 
 interface PostmanHeader {
     key: string;
@@ -292,7 +292,7 @@ export class Importer {
                                 urlencoded.push({
                                     id: uuidv4(),
                                     key: key,
-                                    value: prop.example || prop.default || '',
+                                    value: String(prop.example || prop.default || ''),
                                     description: prop.description,
                                     isEnabled: true
                                 });
@@ -310,7 +310,7 @@ export class Importer {
                                 formData.push({
                                     id: uuidv4(),
                                     key: key,
-                                    value: prop.example || prop.default || '',
+                                    value: String(prop.example || prop.default || ''),
                                     description: prop.description,
                                     type: prop.format === 'binary' ? 'file' : 'text',
                                     isEnabled: true
@@ -490,7 +490,6 @@ export class Importer {
     static parseCurl(content: string): ApiRequest[] {
         // Basic cURL parsing using curlconverter
         try {
-            // @ts-expect-error curlconverter type definition issues
             const requests = curlconverter.toJsonString(content);
             const parsed = JSON.parse(requests);
 

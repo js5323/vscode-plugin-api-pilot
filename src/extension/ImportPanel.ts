@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Importer } from './utils/Importer';
 import { Logger } from './utils/Logger';
-import { CollectionItem, CollectionFolder } from '../../webview/src/types';
+import { CollectionItem, CollectionFolder } from '../shared/types';
 
 export class ImportPanel {
     public static currentPanel: ImportPanel | undefined;

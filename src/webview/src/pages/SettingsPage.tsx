@@ -161,7 +161,10 @@ const GeneralTab = ({ settings, setSettings }: { settings: Settings; setSettings
                     ...settings,
                     general: {
                         ...settings.general,
-                        defaultHeaders: [...settings.general.defaultHeaders, { key: '', value: '' }]
+                        defaultHeaders: [
+                            ...settings.general.defaultHeaders,
+                            { id: Date.now().toString(), key: '', value: '', isEnabled: true }
+                        ]
                     }
                 });
             }}
@@ -647,7 +650,7 @@ export default function SettingsPage() {
         return () => window.removeEventListener('message', handleMessage);
     }, []);
 
-    const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+    const handleChange = (_: React.SyntheticEvent, newValue: number) => {
         setValue(newValue);
     };
 

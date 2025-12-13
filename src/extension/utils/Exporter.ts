@@ -1,5 +1,5 @@
 import * as yaml from 'js-yaml';
-import { CollectionItem, ApiRequest, CollectionFolder } from '../../webview/src/types';
+import { CollectionItem, ApiRequest, CollectionFolder } from '../../shared/types';
 
 interface OpenApiSpec {
     openapi: string;

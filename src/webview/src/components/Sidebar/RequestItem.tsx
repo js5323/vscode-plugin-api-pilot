@@ -238,7 +238,16 @@ export default function RequestItem({
                         <Chip
                             label={request.method.charAt(0).toUpperCase()}
                             size="small"
-                            color={METHOD_COLORS[request.method as keyof typeof METHOD_COLORS] || 'default'}
+                            color={
+                                (METHOD_COLORS[request.method as keyof typeof METHOD_COLORS] || 'default') as
+                                    | 'default'
+                                    | 'primary'
+                                    | 'secondary'
+                                    | 'error'
+                                    | 'info'
+                                    | 'success'
+                                    | 'warning'
+                            }
                             sx={{ mr: 1, height: 14, fontSize: '10px', fontWeight: 'bold', minWidth: 15 }}
                         />
                         <ListItemText

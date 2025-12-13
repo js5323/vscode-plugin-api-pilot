@@ -42,7 +42,7 @@ export default function ExampleEditor() {
 
             if (initialData.example) {
                 setExample(initialData.example);
-                setParentRequest(initialData.parentRequest);
+                setParentRequest(initialData.parentRequest || null);
 
                 // Initialize request config from example or defaults
                 const req = initialData.example.request || {};
@@ -50,8 +50,8 @@ export default function ExampleEditor() {
                 setRequestHeaders(req.headers || []);
                 setRequestBody(req.body || { type: 'none' });
             } else {
-                // Fallback if data structure is different
-                setExample(initialData);
+                // Should not happen for ExampleEditor but handling just in case
+                setExample(initialData.example || null);
             }
         }
 

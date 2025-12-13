@@ -1,5 +1,5 @@
 import * as curlconverter from 'curlconverter';
-import { ApiRequest } from '../../webview/src/types';
+import { ApiRequest } from '../../shared/types';
 
 export class CodeGenerator {
     static generate(request: ApiRequest, language: string): string {
@@ -10,16 +10,12 @@ export class CodeGenerator {
                 case 'curl':
                     return curl;
                 case 'javascript': // Fetch
-                    // @ts-expect-error curlconverter types issue
                     return curlconverter.toJavaScript(curl);
                 case 'javascript-xhr':
-                    // @ts-expect-error curlconverter types issue
                     return curlconverter.toJavaScriptXHR(curl);
                 case 'axios':
-                    // @ts-expect-error curlconverter types issue
                     return curlconverter.toNodeAxios(curl);
                 case 'node': // NodeJs-request
-                    // @ts-expect-error curlconverter types issue
                     return curlconverter.toNodeRequest(curl);
                 default:
                     return 'Unsupported language';

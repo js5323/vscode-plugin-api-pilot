@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ApiExample, ApiRequest } from '../webview/src/types';
+import { ApiExample, ApiRequest, CollectionItem } from '../shared/types';
 
 export class ExamplePanel {
     public static currentPanels = new Map<string, ExamplePanel>();
@@ -107,7 +107,7 @@ export class ExamplePanel {
         const isDev = this._context.extensionMode === vscode.ExtensionMode.Development;
 
         // Calculate path
-        const example = (data?.example || data) as ApiExample;
+        const example = ((data as Record<string, unknown>)?.example || data) as ApiExample;
         let folderPath: { id: string; name: string }[] = [];
         let parentRequestName = '';
 

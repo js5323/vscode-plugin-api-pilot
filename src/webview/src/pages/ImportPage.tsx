@@ -243,7 +243,7 @@ export default function ImportPage() {
                 Data Management
             </Typography>
 
-            <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mb: 3 }}>
+            <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3 }}>
                 <Tab label="Import Requests" />
                 <Tab label="Backup & Restore" />
             </Tabs>

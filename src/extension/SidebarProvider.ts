@@ -9,18 +9,12 @@ import { Logger } from './utils/Logger';
 import { Importer } from './utils/Importer';
 import { Exporter } from './utils/Exporter';
 import { CodeGenerator } from './utils/CodeGenerator';
-import {
-    HistoryItem,
-    ApiRequest,
-    CollectionItem,
-    Environment,
-    ApiExample,
-    CollectionFolder
-} from '../webview/src/types';
+import { HistoryItem, ApiRequest, CollectionItem, Environment, ApiExample, CollectionFolder } from '../shared/types';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
     _doc?: vscode.TextDocument;
+    private _disposables: vscode.Disposable[] = [];
 
     constructor(private readonly _context: vscode.ExtensionContext) {
         this._extensionUri = _context.extensionUri;

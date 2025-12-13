@@ -78,7 +78,11 @@ export default function RequestEditor() {
     const containerRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
     const [responseHistory, setResponseHistory] = useState<ApiResponse[]>(
-        (initialData as Partial<ApiRequest>)?.responseHistory || []
+        (initialData as Partial<ApiRequest>)?.responseHistory?.map((h) => ({
+            ...h,
+            headers: {},
+            data: null
+        })) || []
     );
 
     const handleMouseDown = () => {

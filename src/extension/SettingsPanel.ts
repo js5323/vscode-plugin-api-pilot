@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Environment } from '../webview/src/types';
+import { Environment } from '../shared/types';
 
 export class SettingsPanel {
     public static currentPanel: SettingsPanel | undefined;
@@ -113,7 +113,8 @@ export class SettingsPanel {
                             const newEnv: Environment = {
                                 id: Date.now().toString(),
                                 name,
-                                variables: []
+                                variables: [],
+                                isActive: false
                             };
                             environments.push(newEnv);
                             await this._context.globalState.update('apipilot.environments', environments);
@@ -198,7 +199,7 @@ export class SettingsPanel {
                             });
 
                             if (uri) {
-                                await vscode.workspace.fs.writeFile(uri, Buffer.from(exportData));
+                                await vscode.workspace.fs.writeFile(uri, new Uint8Array(Buffer.from(exportData)));
                                 vscode.window.showInformationMessage('Export successful');
                             }
                         } catch (e: unknown) {
