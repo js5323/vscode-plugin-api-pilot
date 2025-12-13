@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ApiExample, ApiRequest, CollectionItem, CollectionFolder } from '../webview/src/types';
 
 export class ExamplePanel {
     public static currentPanels = new Map<string, ExamplePanel>();
@@ -95,8 +96,58 @@ export class ExamplePanel {
         }
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview, initialData?: any) {
+    private _getHtmlForWebview(webview: vscode.Webview, data?: any) {
         const isDev = this._context.extensionMode === vscode.ExtensionMode.Development;
+
+        // Calculate path
+        const example = (data?.example || data) as ApiExample;
+        let folderPath: { id: string; name: string }[] = [];
+        let parentRequestName = '';
+
+        if (example && example.id) {
+            const collections = this._context.globalState.get<CollectionItem[]>('apipilot.collections', []);
+
+            // Helper to find request containing the example and its path
+            const findRequestAndPath = (
+                items: CollectionItem[],
+                exampleId: string,
+                currentPath: { id: string; name: string }[] = []
+            ): { request: ApiRequest; path: { id: string; name: string }[] } | null => {
+                for (const item of items) {
+                    // If item is a request, check its examples
+                    if (item.type === 'request') {
+                        if (item.examples && item.examples.some((ex: ApiExample) => ex.id === exampleId)) {
+                            return { request: item, path: currentPath };
+                        }
+                    }
+
+                    // If item has children, recurse
+                    if (item.type === 'folder' && item.children) {
+                        const found = findRequestAndPath(item.children, exampleId, [
+                            ...currentPath,
+                            { id: item.id, name: item.name }
+                        ]);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const result = findRequestAndPath(collections, example.id);
+            if (result) {
+                folderPath = result.path;
+                parentRequestName = result.request.name;
+            }
+        }
+
+        // Inject path info into data
+        // data structure passed to webview is window.initialData
+        // We need to make sure we don't break existing structure.
+        // Existing: window.initialData = data
+        // We will augment it.
+        const initialData = data ? JSON.parse(JSON.stringify(data)) : {};
+        initialData._folderPath = folderPath;
+        initialData._parentRequestName = parentRequestName;
 
         let scriptUri = '';
         let styleResetUri = '';

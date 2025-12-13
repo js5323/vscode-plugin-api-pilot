@@ -24,8 +24,8 @@ export default function Sidebar() {
     };
 
     return (
-        <Stack sx={{ height: '100vh', bgcolor: 'background.default' }}>
-            <Stack direction={'column'} flex={1} sx={{ overflow: 'hidden' }}>
+        <Stack sx={{ height: '100vh', bgcolor: 'background.default', overflow: 'hidden' }}>
+            <Stack direction={'column'} flex={1} sx={{ overflowY: 'auto', overflowX: 'hidden' }}>
                 {/* Left Navigation Rail */}
                 <SidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
 

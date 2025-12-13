@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { RequestHandler } from './RequestHandler';
 import { Logger } from './utils/Logger';
+import { ApiRequest, CollectionItem, CollectionFolder, Environment } from '../webview/src/types';
 
 export class RequestPanel {
     public static currentPanels = new Map<string, RequestPanel>();
@@ -10,7 +11,7 @@ export class RequestPanel {
     private _disposables: vscode.Disposable[] = [];
     private readonly _requestId?: string;
 
-    public static createOrShow(context: vscode.ExtensionContext, request?: any) {
+    public static createOrShow(context: vscode.ExtensionContext, request?: ApiRequest) {
         const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
         // If we have a request ID, check if we already have a panel for it
@@ -44,7 +45,7 @@ export class RequestPanel {
         }
     }
 
-    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, request?: any) {
+    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, request?: ApiRequest) {
         this._panel = panel;
         this._extensionUri = context.extensionUri;
         this._context = context;
@@ -61,7 +62,10 @@ export class RequestPanel {
                         try {
                             Logger.log('Execute Request Command Received');
 
-                            const environments = this._context.globalState.get<any[]>('apipilot.environments', []);
+                            const environments = this._context.globalState.get<Environment[]>(
+                                'apipilot.environments',
+                                []
+                            );
                             const activeEnv = environments.find((e) => e.isActive);
                             const variables = activeEnv ? activeEnv.variables : [];
 
@@ -126,17 +130,18 @@ export class RequestPanel {
                         break;
                     }
                     case 'saveRequest': {
-                        const updatedRequest = message.payload;
-                        const collections = this._context.globalState.get<any[]>('apipilot.collections', []);
+                        const updatedRequest = message.payload as ApiRequest;
+                        const collections = this._context.globalState.get<CollectionItem[]>('apipilot.collections', []);
 
-                        const updateInTree = (items: any[]): boolean => {
+                        const updateInTree = (items: CollectionItem[]): boolean => {
                             for (let i = 0; i < items.length; i++) {
                                 if (items[i].id === updatedRequest.id) {
                                     items[i] = updatedRequest;
                                     return true;
                                 }
-                                if (items[i].children) {
-                                    if (updateInTree(items[i].children)) return true;
+                                const item = items[i];
+                                if (item.type === 'folder' && item.children) {
+                                    if (updateInTree(item.children)) return true;
                                 }
                             }
                             return false;
@@ -188,8 +193,39 @@ export class RequestPanel {
         }
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview, initialData?: any) {
+    private _getHtmlForWebview(webview: vscode.Webview, initialData?: ApiRequest) {
         const isDev = this._context.extensionMode === vscode.ExtensionMode.Development;
+
+        // Calculate folder path
+        let folderPath: { id: string; name: string }[] = [];
+        if (initialData && initialData.id) {
+            const collections = this._context.globalState.get<CollectionItem[]>('apipilot.collections', []);
+            const findPath = (
+                items: CollectionItem[],
+                targetId: string,
+                currentPath: { id: string; name: string }[] = []
+            ): { id: string; name: string }[] | null => {
+                for (const item of items) {
+                    if (item.id === targetId) {
+                        return currentPath;
+                    }
+                    if (item.type === 'folder' && item.children) {
+                        const found = findPath(item.children, targetId, [
+                            ...currentPath,
+                            { id: item.id, name: item.name }
+                        ]);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            folderPath = findPath(collections, initialData.id) || [];
+        }
+
+        // Inject folderPath into initialData
+        if (initialData) {
+            initialData._folderPath = folderPath;
+        }
 
         let scriptUri = '';
         let styleResetUri = '';

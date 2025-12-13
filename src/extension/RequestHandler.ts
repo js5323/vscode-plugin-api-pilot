@@ -1,15 +1,7 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { URLSearchParams } from 'url';
 import { Logger } from './utils/Logger';
-
-export interface ApiRequest {
-    method: string;
-    url: string;
-    queryParams?: any[];
-    headers?: any[];
-    body?: any;
-    auth?: any;
-}
+import { ApiRequest, KeyValueItem, ApiRequestBody } from '../webview/src/types';
 
 export interface ApiResponse {
     status: number;
@@ -21,7 +13,7 @@ export interface ApiResponse {
 }
 
 export class RequestHandler {
-    static async makeRequest(request: ApiRequest, variables: any[] = []): Promise<ApiResponse> {
+    static async makeRequest(request: ApiRequest, variables: KeyValueItem[] = []): Promise<ApiResponse> {
         Logger.log('Starting Request Execution...');
         Logger.log(`Request Method: ${request.method}`);
         Logger.log(`Raw URL: ${request.url}`);
@@ -90,7 +82,7 @@ export class RequestHandler {
             } else if (bodyType === 'x-www-form-urlencoded') {
                 const urlParams = new URLSearchParams();
                 if (Array.isArray(request.body.urlencoded)) {
-                    request.body.urlencoded.forEach((p: any) => {
+                    request.body.urlencoded.forEach((p: KeyValueItem) => {
                         if (p.isEnabled && p.key) {
                             urlParams.append(substitute(p.key), substitute(p.value));
                         }

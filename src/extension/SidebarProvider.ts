@@ -7,6 +7,7 @@ import { ImportPanel } from './ImportPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { Logger } from './utils/Logger';
 import { Importer } from './utils/Importer';
+import { HistoryItem } from '../webview/src/types';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
@@ -44,10 +45,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         const response = await RequestHandler.makeRequest(data.payload);
 
                         // Save to history
-                        const history = this._context.globalState.get('apipilot.history', []) as any[];
-                        const historyItem = {
+                        const history = this._context.globalState.get<HistoryItem[]>('apipilot.history', []);
+                        const historyItem: HistoryItem = {
                             ...data.payload,
                             id: Date.now().toString(), // New ID for history item
+                            responseHistory: undefined, // History items don't need history of history
                             response: {
                                 status: response.status,
                                 statusText: response.statusText,
@@ -83,7 +85,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'getHistory': {
-                    const history = this._context.globalState.get('apipilot.history', []);
+                    const history = this._context.globalState.get<HistoryItem[]>('apipilot.history', []);
                     webviewView.webview.postMessage({
                         type: 'updateHistory',
                         payload: history

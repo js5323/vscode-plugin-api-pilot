@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Button, Chip, Paper } from '@mui/material';
+import { Box, Typography, Button, Chip, Paper, Breadcrumbs } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import { getVsCodeApi } from '../utils/vscode';
 import { ApiExample, ApiRequest } from '../types';
 
@@ -9,11 +10,17 @@ const vscode = getVsCodeApi();
 export default function ExampleEditor() {
     const [example, setExample] = useState<ApiExample | null>(null);
     const [parentRequest, setParentRequest] = useState<ApiRequest | null>(null);
+    const [pathInfo, setPathInfo] = useState<{ path: any[]; parentName: string }>({ path: [], parentName: '' });
 
     useEffect(() => {
         // Get initial data from window
         const initialData = (window as any).initialData;
         if (initialData) {
+            setPathInfo({
+                path: initialData._folderPath || [],
+                parentName: initialData._parentRequestName || ''
+            });
+
             if (initialData.example) {
                 setExample(initialData.example);
                 setParentRequest(initialData.parentRequest);
@@ -46,6 +53,22 @@ export default function ExampleEditor() {
 
     return (
         <Box sx={{ p: 3, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb" sx={{ mb: 2 }}>
+                {pathInfo.path.map((folder: any) => (
+                    <Typography key={folder.id} color="text.secondary" variant="body2">
+                        {folder.name}
+                    </Typography>
+                ))}
+                {pathInfo.parentName && (
+                    <Typography color="text.secondary" variant="body2">
+                        {pathInfo.parentName}
+                    </Typography>
+                )}
+                <Typography color="text.primary" variant="body2" fontWeight="bold">
+                    {example.name}
+                </Typography>
+            </Breadcrumbs>
+
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h5" sx={{ mr: 2 }}>
                     {example.name}

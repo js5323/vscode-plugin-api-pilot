@@ -36,6 +36,7 @@ export interface ApiRequest {
     parentId?: string; // ID of parent folder or collection, or undefined if root
     examples?: ApiExample[];
     responseHistory?: any[];
+    _folderPath?: { id: string; name: string }[];
 }
 
 export interface ApiExample {

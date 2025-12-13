@@ -28,7 +28,7 @@ export default function SidebarFooter({ onImportClick, onSettingsClick }: Sideba
                 </Tooltip>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Tooltip title="Settings">
+                <Tooltip title="Settings" placement="left">
                     <IconButton size="small" onClick={onSettingsClick}>
                         <SettingsIcon fontSize="small" />
                     </IconButton>

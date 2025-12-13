@@ -1,8 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Paper, TextField, Button, Select, MenuItem, FormControl, Tooltip, IconButton } from '@mui/material';
+import {
+    Box,
+    Paper,
+    TextField,
+    Button,
+    Select,
+    MenuItem,
+    FormControl,
+    Tooltip,
+    IconButton,
+    Breadcrumbs,
+    Typography
+} from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveIcon from '@mui/icons-material/Save';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import EditIcon from '@mui/icons-material/Edit';
 import { getVsCodeApi } from '../utils/vscode';
 import { ApiRequest, ApiRequestBody } from '../types';
 import RequestConfig from '../components/RequestEditor/RequestConfig';
@@ -75,6 +89,7 @@ export default function RequestEditor() {
     const isDragging = useRef(false);
     const [settings, setSettings] = useState<any>({ general: { autoSave: true } });
     const [responseHistory, setResponseHistory] = useState<any[]>(initialData?.responseHistory || []);
+    const [isEditingName, setIsEditingName] = useState(false);
 
     const handleMouseDown = () => {
         isDragging.current = true;
@@ -189,6 +204,50 @@ export default function RequestEditor() {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+            {/* Breadcrumbs */}
+            <Box sx={{ px: 2, py: 1, bgcolor: 'background.default' }}>
+                <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
+                    {(request._folderPath || []).map((folder: any) => (
+                        <Typography key={folder.id} color="text.secondary" variant="body2">
+                            {folder.name}
+                        </Typography>
+                    ))}
+                    {isEditingName ? (
+                        <TextField
+                            value={request.name}
+                            onChange={(e) => handleChange('name', e.target.value)}
+                            onBlur={() => setIsEditingName(false)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') setIsEditingName(false);
+                            }}
+                            size="small"
+                            variant="standard"
+                            autoFocus
+                            sx={{ minWidth: 150 }}
+                            inputProps={{ style: { fontSize: '0.875rem', fontWeight: 'bold' } }}
+                        />
+                    ) : (
+                        <Box
+                            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                            onClick={() => setIsEditingName(true)}
+                        >
+                            <Typography color="text.primary" variant="body2" fontWeight="bold">
+                                {request.name}
+                            </Typography>
+                            <EditIcon
+                                sx={{
+                                    ml: 1,
+                                    fontSize: 16,
+                                    color: 'text.secondary',
+                                    opacity: 0.5,
+                                    '&:hover': { opacity: 1 }
+                                }}
+                            />
+                        </Box>
+                    )}
+                </Breadcrumbs>
+            </Box>
+
             {/* Header / URL Bar */}
             <Paper square sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <FormControl size="small" sx={{ minWidth: 100 }}>
