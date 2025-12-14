@@ -105,6 +105,7 @@ export default function CollectionsTab() {
     };
 
     const handleAddRequestToFolder = (folderId: string) => {
+        let newRequestToOpen: ApiRequest | null = null;
         const addRequest = (items: CollectionItem[]): CollectionItem[] => {
             return items.map((item) => {
                 if (item.id === folderId && item.type === 'folder') {
@@ -116,6 +117,7 @@ export default function CollectionsTab() {
                         type: 'request',
                         parentId: folderId
                     };
+                    newRequestToOpen = newRequest;
                     return { ...item, children: [newRequest, ...item.children] } as CollectionFolder;
                 }
                 if (item.type === 'folder') {
@@ -125,6 +127,10 @@ export default function CollectionsTab() {
             });
         };
         saveCollections(addRequest(collections));
+
+        if (newRequestToOpen) {
+            vscode.postMessage({ type: 'openRequest', payload: newRequestToOpen });
+        }
     };
 
     const handleAddFolderToFolder = (folderId: string) => {

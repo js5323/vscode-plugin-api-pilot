@@ -1,3 +1,5 @@
+import { WebviewInitialData } from '../types';
+
 interface VSCodeApi {
     postMessage(message: unknown): void;
     setState(state: unknown): void;
@@ -7,7 +9,9 @@ interface VSCodeApi {
 declare global {
     interface Window {
         vscode?: VSCodeApi;
+        viewType?: string;
         acquireVsCodeApi?: () => VSCodeApi;
+        initialData?: WebviewInitialData;
     }
 }
 

@@ -16,9 +16,9 @@ export default function EnvironmentEditor() {
 
     useEffect(() => {
         // Load initial data
-        const initialData = (window as unknown as { initialData?: Environment }).initialData;
-        if (initialData) {
-            setEnvironment(initialData);
+        const initialData = window.initialData;
+        if (initialData && 'variables' in initialData) {
+            setEnvironment(initialData as Environment);
         }
 
         // Get settings

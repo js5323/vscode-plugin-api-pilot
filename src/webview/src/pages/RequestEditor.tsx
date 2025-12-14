@@ -69,7 +69,7 @@ const migrateRequest = (data: unknown): ApiRequest => {
 };
 
 export default function RequestEditor() {
-    const initialData = (window as unknown as { initialData?: unknown }).initialData;
+    const initialData = window.initialData;
     const [request, setRequest] = useState<ApiRequest>(migrateRequest(initialData));
     const [response, setResponse] = useState<ApiResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -77,12 +77,20 @@ export default function RequestEditor() {
     const [splitPos, setSplitPos] = useState(50); // percentage
     const containerRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
+
+    const getInitialHistory = () => {
+        if (initialData && 'responseHistory' in initialData && Array.isArray(initialData.responseHistory)) {
+            return initialData.responseHistory;
+        }
+        return [];
+    };
+
     const [responseHistory, setResponseHistory] = useState<ApiResponse[]>(
-        (initialData as Partial<ApiRequest>)?.responseHistory?.map((h) => ({
+        getInitialHistory().map((h) => ({
             ...h,
             headers: {},
             data: null
-        })) || []
+        }))
     );
 
     const handleMouseDown = () => {

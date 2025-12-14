@@ -98,6 +98,20 @@ export interface ClientCertificate {
     passphrase?: string;
 }
 
+export interface ExampleInitialData {
+    example?: ApiExample;
+    parentRequest?: ApiRequest;
+    _folderPath?: { id: string; name: string }[];
+    _parentRequestName?: string;
+    [key: string]: unknown;
+}
+
+export type WebviewInitialData =
+    | (ApiRequest & { viewType?: 'editor' })
+    | (ExampleInitialData & { viewType?: 'example-editor' })
+    | (Environment & { viewType?: 'environment-editor' })
+    | undefined;
+
 export interface Settings {
     general: {
         timeout: number;

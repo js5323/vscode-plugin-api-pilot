@@ -4,17 +4,9 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { getVsCodeApi } from '../utils/vscode';
-import { ApiExample, ApiRequest, KeyValueItem, ApiRequestBody } from '../types';
+import { ApiExample, ApiRequest, KeyValueItem, ApiRequestBody, ExampleInitialData } from '../types';
 import KeyValueTable from '../components/RequestEditor/KeyValueTable';
 import BodyEditor from '../components/RequestEditor/BodyEditor';
-
-interface InitialData {
-    example?: ApiExample;
-    parentRequest?: ApiRequest;
-    _folderPath?: { id: string; name: string }[];
-    _parentRequestName?: string;
-    [key: string]: unknown;
-}
 
 const vscode = getVsCodeApi();
 
@@ -33,8 +25,14 @@ export default function ExampleEditor() {
 
     useEffect(() => {
         // Get initial data from window
-        const initialData = (window as unknown as { initialData: InitialData }).initialData;
-        if (initialData) {
+        const initialData = window.initialData;
+
+        // Type guard for ExampleInitialData
+        const isExampleData = (data: unknown): data is ExampleInitialData => {
+            return data !== null && typeof data === 'object' && 'example' in data;
+        };
+
+        if (initialData && isExampleData(initialData)) {
             setPathInfo({
                 path: initialData._folderPath || [],
                 parentName: initialData._parentRequestName || ''
@@ -50,8 +48,7 @@ export default function ExampleEditor() {
                 setRequestHeaders(req.headers || []);
                 setRequestBody(req.body || { type: 'none' });
             } else {
-                // Should not happen for ExampleEditor but handling just in case
-                setExample(initialData.example || null);
+                setExample(null);
             }
         }
 

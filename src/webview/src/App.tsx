@@ -6,7 +6,7 @@ import ImportPage from './pages/ImportPage';
 import SettingsPage from './pages/SettingsPage';
 
 // Get the view type from the window object (injected by the extension)
-const viewType = (window as unknown as { viewType?: string }).viewType || 'sidebar';
+const viewType = window.viewType || 'sidebar';
 
 function App() {
     if (viewType === 'editor') {

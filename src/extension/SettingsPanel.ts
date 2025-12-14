@@ -275,8 +275,8 @@ export class SettingsPanel {
         let styleResetUri = '';
 
         if (isDev) {
-            scriptUri = 'http://localhost:5173/src/main.tsx';
-            styleResetUri = 'http://localhost:5173/src/index.css';
+            scriptUri = 'http://127.0.0.1:5173/src/main.tsx';
+            styleResetUri = 'http://127.0.0.1:5173/src/index.css';
         } else {
             scriptUri = webview
                 .asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'dist', 'assets', 'index.js'))
@@ -289,21 +289,68 @@ export class SettingsPanel {
         const nonce = this.getNonce();
 
         const csp = isDev
-            ? `default-src 'none'; connect-src ${webview.cspSource} https: http://localhost:5173 ws://localhost:5173 data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' http://localhost:5173; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' http://localhost:5173; font-src ${webview.cspSource} https: data:;`
+            ? `default-src 'none'; connect-src ${webview.cspSource} https: http://127.0.0.1:5173 ws://127.0.0.1:5173 data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' http://127.0.0.1:5173; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' http://127.0.0.1:5173; font-src ${webview.cspSource} https: data:;`
             : `default-src 'none'; connect-src ${webview.cspSource} https: data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval'; font-src ${webview.cspSource} https: data:;`;
 
         return `<!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <meta http-equiv="Content-Security-Policy" content="${csp}">
-                <link href="${styleResetUri}" rel="stylesheet">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                ${!isDev ? `<link href="${styleResetUri}" rel="stylesheet">` : ''}
                 <title>Settings</title>
+                <script nonce="${nonce}">
+                    window.viewType = 'settings';
+                </script>
+                <script nonce="${nonce}">
+                    // Acquire API once and store globally
+                    try {
+                        const vscode = acquireVsCodeApi();
+                        window.vscode = vscode;
+                    } catch (e) {
+                        console.error("Failed to acquire vscode api", e);
+                    }
+
+                    const vscode = window.vscode;
+                    
+                    // Override console.log to send messages to extension
+                    const originalLog = console.log;
+                    console.log = function(...args) {
+                        originalLog.apply(console, args);
+                        if (vscode) {
+                            vscode.postMessage({ type: 'log', value: args.join(' ') });
+                        }
+                    };
+
+                    const originalError = console.error;
+                    console.error = function(...args) {
+                        originalError.apply(console, args);
+                        if (vscode) {
+                            vscode.postMessage({ type: 'onError', value: args.join(' ') });
+                        }
+                    };
+                </script>
+                ${
+                    isDev
+                        ? `
+                    <script type="module" nonce="${nonce}">
+                        import RefreshRuntime from "http://127.0.0.1:5173/@react-refresh"
+                        RefreshRuntime.injectIntoGlobalHook(window)
+                        window.$RefreshReg$ = () => {}
+                        window.$RefreshSig$ = () => (type) => type
+                        window.__vite_plugin_react_preamble_installed__ = true
+                    </script>
+                    <script type="module" nonce="${nonce}" src="http://127.0.0.1:5173/@vite/client"></script>
+                    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+                `
+                        : `
+                    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+                `
+                }
             </head>
             <body>
-                <div id="root" data-page="settings"></div>
-                <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+                <div id="root"></div>
             </body>
             </html>`;
     }
