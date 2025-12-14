@@ -1,14 +1,11 @@
 import * as vscode from 'vscode';
+import { BasePanel } from './BasePanel';
 import { RequestHandler } from './RequestHandler';
 import { Logger } from './utils/Logger';
-import { ApiRequest, CollectionItem, Environment, Settings } from '../shared/types';
+import { ApiRequest, CollectionItem, Environment, Settings, RequestPanelMessage } from '../shared/types';
 
-export class RequestPanel {
+export class RequestPanel extends BasePanel<RequestPanelMessage> {
     public static currentPanels = new Map<string, RequestPanel>();
-    private readonly _panel: vscode.WebviewPanel;
-    private readonly _extensionUri: vscode.Uri;
-    private readonly _context: vscode.ExtensionContext;
-    private _disposables: vscode.Disposable[] = [];
     private readonly _requestId?: string;
 
     public static createOrShow(context: vscode.ExtensionContext, request?: ApiRequest) {
@@ -46,198 +43,12 @@ export class RequestPanel {
     }
 
     private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, request?: ApiRequest) {
-        this._panel = panel;
-        this._extensionUri = context.extensionUri;
-        this._context = context;
+        super(panel, context);
         this._requestId = request?.id;
-
-        this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, request);
-
-        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-
-        this._panel.webview.onDidReceiveMessage(
-            async (message) => {
-                switch (message.type) {
-                    case 'executeRequest': {
-                        try {
-                            Logger.log('Execute Request Command Received');
-
-                            const environments = this._context.globalState.get<Environment[]>(
-                                'apipilot.environments',
-                                []
-                            );
-                            const activeEnv = environments.find((e) => e.isActive);
-                            const variables = activeEnv ? activeEnv.variables : [];
-
-                            Logger.log(`Active Environment: ${activeEnv ? activeEnv.name : 'None'}`);
-
-                            const settings = this._context.globalState.get<Settings>('apipilot.settings');
-                            const response = await RequestHandler.makeRequest(message.payload, variables, settings);
-
-                            Logger.log(`Request Execution Completed. Status: ${response.status}`);
-
-                            // Update Global History
-                            const history = this._context.globalState.get<unknown[]>('apipilot.history', []);
-                            const historyItem = {
-                                ...message.payload,
-                                id: Date.now().toString(),
-                                responseHistory: undefined,
-                                response: {
-                                    status: response.status,
-                                    statusText: response.statusText,
-                                    time: Date.now(),
-                                    size: response.size,
-                                    duration: response.duration
-                                },
-                                timestamp: Date.now()
-                            };
-                            history.unshift(historyItem);
-                            if (history.length > 50) history.pop();
-                            await this._context.globalState.update('apipilot.history', history);
-
-                            // Notify Sidebar to refresh history
-                            vscode.commands.executeCommand('apipilot.refreshHistory');
-
-                            this._panel.webview.postMessage({
-                                type: 'response',
-                                payload: {
-                                    status: response.status,
-                                    statusText: response.statusText,
-                                    data: response.data,
-                                    headers: response.headers,
-                                    duration: response.duration,
-                                    size: response.size
-                                }
-                            });
-                        } catch (e: unknown) {
-                            const errorMessage = e instanceof Error ? e.message : String(e);
-                            Logger.error(`Request execution failed: ${errorMessage}`);
-                            this._panel.webview.postMessage({
-                                type: 'error',
-                                payload: errorMessage
-                            });
-                        }
-                        break;
-                    }
-                    case 'updateTitle': {
-                        this._panel.title = message.value;
-                        break;
-                    }
-                    case 'generateCode': {
-                        // TODO: Implement code generation
-                        // const code = CodeGenerator.generate(message.payload.request, message.payload.language);
-                        // this._panel.webview.postMessage({
-                        //     type: 'codeGenerated',
-                        //     payload: code
-                        // });
-                        break;
-                    }
-                    case 'onInfo': {
-                        if (!message.value) return;
-                        vscode.window.showInformationMessage(message.value);
-                        break;
-                    }
-                    case 'onError': {
-                        if (!message.value) return;
-                        vscode.window.showErrorMessage(message.value);
-                        break;
-                    }
-                    case 'log': {
-                        console.log(`Log from RequestPanel: ${message.value}`);
-                        break;
-                    }
-                    case 'selectFile': {
-                        const context = message.context;
-                        const options: vscode.OpenDialogOptions = {
-                            canSelectMany: false,
-                            openLabel: 'Select',
-                            canSelectFiles: true,
-                            canSelectFolders: false
-                        };
-
-                        vscode.window.showOpenDialog(options).then((fileUri) => {
-                            if (fileUri && fileUri[0]) {
-                                this._panel.webview.postMessage({
-                                    type: 'fileSelected',
-                                    payload: fileUri[0].fsPath,
-                                    context: context
-                                });
-                            }
-                        });
-                        break;
-                    }
-                    case 'saveRequest': {
-                        const updatedRequest = message.payload as ApiRequest;
-                        const collections = this._context.globalState.get<CollectionItem[]>('apipilot.collections', []);
-
-                        const updateInTree = (items: CollectionItem[]): boolean => {
-                            for (let i = 0; i < items.length; i++) {
-                                if (items[i].id === updatedRequest.id) {
-                                    items[i] = updatedRequest;
-                                    return true;
-                                }
-                                const item = items[i];
-                                if (item.type === 'folder' && item.children) {
-                                    if (updateInTree(item.children)) return true;
-                                }
-                            }
-                            return false;
-                        };
-
-                        const found = updateInTree(collections);
-                        if (found) {
-                            await this._context.globalState.update('apipilot.collections', collections);
-                            vscode.commands.executeCommand('apipilot.refreshSidebar');
-                            // If not auto-saving (or if we want to give feedback), show info.
-                            // But usually auto-save is silent. We can send a 'saved' message back if needed.
-                            this._panel.webview.postMessage({ type: 'onInfo', value: 'Request saved' });
-                        } else {
-                            this._panel.webview.postMessage({
-                                type: 'onError',
-                                value: 'Could not find request to save'
-                            });
-                        }
-                        break;
-                    }
-                    case 'getSettings': {
-                        const settings = this._context.globalState.get('apipilot.settings', {}) as {
-                            general?: { autoSave?: boolean };
-                        };
-                        if (!settings.general) settings.general = {};
-                        if (settings.general.autoSave === undefined) settings.general.autoSave = true;
-
-                        this._panel.webview.postMessage({
-                            type: 'updateSettings',
-                            payload: settings
-                        });
-                        break;
-                    }
-                }
-            },
-            null,
-            this._disposables
-        );
-    }
-
-    public dispose() {
-        if (this._requestId) {
-            RequestPanel.currentPanels.delete(this._requestId);
-        }
-        this._panel.dispose();
-        while (this._disposables.length) {
-            const x = this._disposables.pop();
-            if (x) {
-                x.dispose();
-            }
-        }
-    }
-
-    private _getHtmlForWebview(webview: vscode.Webview, initialData?: ApiRequest) {
-        const isDev = this._context.extensionMode === vscode.ExtensionMode.Development;
 
         // Calculate folder path
         let folderPath: { id: string; name: string }[] = [];
-        if (initialData && initialData.id) {
+        if (request && request.id) {
             const collections = this._context.globalState.get<CollectionItem[]>('apipilot.collections', []);
             const findPath = (
                 items: CollectionItem[],
@@ -258,98 +69,181 @@ export class RequestPanel {
                 }
                 return null;
             };
-            folderPath = findPath(collections, initialData.id) || [];
+            folderPath = findPath(collections, request.id) || [];
         }
 
         // Inject folderPath into initialData
-        if (initialData) {
-            initialData._folderPath = folderPath;
+        if (request) {
+            request._folderPath = folderPath;
         }
 
-        let scriptUri = '';
-        let styleResetUri = '';
-
-        if (isDev) {
-            scriptUri = 'http://localhost:5173/src/main.tsx';
-            styleResetUri = 'http://localhost:5173/src/index.css';
-        } else {
-            scriptUri = webview
-                .asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'dist', 'assets', 'index.js'))
-                .toString();
-            styleResetUri = webview
-                .asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'dist', 'assets', 'index.css'))
-                .toString();
+        let initialDataScript = '';
+        if (request) {
+            initialDataScript = `window.initialData = ${JSON.stringify(request)};`;
         }
 
-        const nonce = getNonce();
+        this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, 'editor', initialDataScript);
+    }
 
-        const initialDataScript = initialData ? `window.initialData = ${JSON.stringify(initialData)};` : '';
+    protected _onDispose() {
+        if (this._requestId) {
+            RequestPanel.currentPanels.delete(this._requestId);
+        }
+    }
 
-        const csp = isDev
-            ? `default-src 'none'; connect-src ${webview.cspSource} https: http://localhost:5173 ws://localhost:5173 data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' http://localhost:5173; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' http://localhost:5173 blob:; worker-src blob:; font-src ${webview.cspSource} https: data:;`
-            : `default-src 'none'; connect-src ${webview.cspSource} https: data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' blob:; worker-src blob:; font-src ${webview.cspSource} https: data:;`;
+    protected async _onMessage(message: RequestPanelMessage) {
+        switch (message.type) {
+            case 'executeRequest': {
+                try {
+                    Logger.log('Execute Request Command Received');
 
-        return `<!DOCTYPE html>
-			<html lang="en">
-			<head>
-				<meta charset="UTF-8">
-				<meta http-equiv="Content-Security-Policy" content="${csp}">
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				${!isDev ? `<link href="${styleResetUri}" rel="stylesheet">` : ''}
-				<title>ApiPilot Request</title>
-                <script nonce="${nonce}">
-                    window.viewType = 'editor';
-                    ${initialDataScript}
-                </script>
-                 <script nonce="${nonce}">
-                    // Acquire API once and store globally
-                    try {
-                        const vscode = acquireVsCodeApi();
-                        window.vscode = vscode;
-                    } catch (e) {
-                        console.error("Failed to acquire vscode api", e);
-                    }
-                    const vscode = window.vscode;
+                    const environments = this._context.globalState.get<Environment[]>('apipilot.environments', []);
+                    const activeEnv = environments.find((e) => e.isActive);
+                    const variables = activeEnv ? activeEnv.variables : [];
 
-                     // Override console.log
-                    const originalLog = console.log;
-                    console.log = function(...args) {
-                        originalLog.apply(console, args);
-                        if (vscode) {
-                            vscode.postMessage({ type: 'log', value: args.join(' ') });
-                        }
+                    Logger.log(`Active Environment: ${activeEnv ? activeEnv.name : 'None'}`);
+
+                    const settings = this._context.globalState.get<Settings>('apipilot.settings');
+                    const response = await RequestHandler.makeRequest(message.payload, variables, settings);
+
+                    Logger.log(`Request Execution Completed. Status: ${response.status}`);
+
+                    // Update Global History
+                    const history = this._context.globalState.get<unknown[]>('apipilot.history', []);
+                    const historyItem = {
+                        ...message.payload,
+                        id: Date.now().toString(),
+                        responseHistory: undefined,
+                        response: {
+                            status: response.status,
+                            statusText: response.statusText,
+                            time: Date.now(),
+                            size: response.size,
+                            duration: response.duration
+                        },
+                        timestamp: Date.now()
                     };
-                </script>
-                ${
-                    isDev
-                        ? `
-                    <script type="module" nonce="${nonce}">
-                        import RefreshRuntime from "http://localhost:5173/@react-refresh"
-                        RefreshRuntime.injectIntoGlobalHook(window)
-                        window.$RefreshReg$ = () => {}
-                        window.$RefreshSig$ = () => (type) => type
-                        window.__vite_plugin_react_preamble_installed__ = true
-                    </script>
-                    <script type="module" nonce="${nonce}" src="http://localhost:5173/@vite/client"></script>
-                    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
-                `
-                        : `
-                    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
-                `
-                }
-			</head>
-			<body>
-				<div id="root"></div>
-			</body>
-			</html>`;
-    }
-}
+                    history.unshift(historyItem);
+                    if (history.length > 50) history.pop();
+                    await this._context.globalState.update('apipilot.history', history);
 
-function getNonce() {
-    let text = '';
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 32; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
+                    // Notify Sidebar to refresh history
+                    vscode.commands.executeCommand('apipilot.refreshHistory');
+
+                    this._panel.webview.postMessage({
+                        type: 'response',
+                        payload: {
+                            status: response.status,
+                            statusText: response.statusText,
+                            data: response.data,
+                            headers: response.headers,
+                            duration: response.duration,
+                            size: response.size
+                        }
+                    });
+                } catch (e: unknown) {
+                    const errorMessage = e instanceof Error ? e.message : String(e);
+                    Logger.error(`Request execution failed: ${errorMessage}`);
+                    this._panel.webview.postMessage({
+                        type: 'error',
+                        payload: errorMessage
+                    });
+                }
+                break;
+            }
+            case 'updateTitle': {
+                this._panel.title = message.value;
+                break;
+            }
+            case 'generateCode': {
+                // TODO: Implement code generation
+                // const code = CodeGenerator.generate(message.payload.request, message.payload.language);
+                // this._panel.webview.postMessage({
+                //     type: 'codeGenerated',
+                //     payload: code
+                // });
+                break;
+            }
+            case 'onInfo': {
+                if (!message.value) return;
+                vscode.window.showInformationMessage(message.value);
+                break;
+            }
+            case 'onError': {
+                if (!message.value) return;
+                vscode.window.showErrorMessage(message.value);
+                break;
+            }
+            case 'log': {
+                console.log(`Log from RequestPanel: ${message.value}`);
+                break;
+            }
+            case 'selectFile': {
+                const context = message.context;
+                const options: vscode.OpenDialogOptions = {
+                    canSelectMany: false,
+                    openLabel: 'Select',
+                    canSelectFiles: true,
+                    canSelectFolders: false
+                };
+
+                vscode.window.showOpenDialog(options).then((fileUri) => {
+                    if (fileUri && fileUri[0]) {
+                        this._panel.webview.postMessage({
+                            type: 'fileSelected',
+                            payload: fileUri[0].fsPath,
+                            context: context
+                        });
+                    }
+                });
+                break;
+            }
+            case 'saveRequest': {
+                const updatedRequest = message.payload as ApiRequest;
+                const collections = this._context.globalState.get<CollectionItem[]>('apipilot.collections', []);
+
+                const updateInTree = (items: CollectionItem[]): boolean => {
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].id === updatedRequest.id) {
+                            items[i] = updatedRequest;
+                            return true;
+                        }
+                        const item = items[i];
+                        if (item.type === 'folder' && item.children) {
+                            if (updateInTree(item.children)) return true;
+                        }
+                    }
+                    return false;
+                };
+
+                const found = updateInTree(collections);
+                if (found) {
+                    await this._context.globalState.update('apipilot.collections', collections);
+                    vscode.commands.executeCommand('apipilot.refreshSidebar');
+                    // If not auto-saving (or if we want to give feedback), show info.
+                    // But usually auto-save is silent. We can send a 'saved' message back if needed.
+                    this._panel.webview.postMessage({ type: 'onInfo', value: 'Request saved' });
+                } else {
+                    this._panel.webview.postMessage({
+                        type: 'onError',
+                        value: 'Could not find request to save'
+                    });
+                }
+                break;
+            }
+            case 'getSettings': {
+                const settings = this._context.globalState.get('apipilot.settings', {}) as {
+                    general?: { autoSave?: boolean };
+                };
+                if (!settings.general) settings.general = {};
+                if (settings.general.autoSave === undefined) settings.general.autoSave = true;
+
+                this._panel.webview.postMessage({
+                    type: 'updateSettings',
+                    payload: settings
+                });
+                break;
+            }
+        }
     }
-    return text;
 }

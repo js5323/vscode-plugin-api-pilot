@@ -157,3 +157,107 @@ export interface BackupData {
         history: HistoryItem[];
     };
 }
+
+// Message Types
+export interface LogMessage {
+    type: 'log';
+    value: string;
+}
+export interface InfoMessage {
+    type: 'onInfo';
+    value: string;
+}
+export interface ErrorMessage {
+    type: 'onError';
+    value: string;
+}
+export interface CloseMessage {
+    type: 'close';
+}
+export interface GetCollectionsMessage {
+    type: 'getCollections';
+}
+export interface ImportDataMessage {
+    type: 'importData';
+    payload: { collectionId?: string; newCollectionName?: string; content: string };
+}
+export interface ExecuteRequestMessage {
+    type: 'executeRequest';
+    payload: ApiRequest;
+}
+export interface UpdateTitleMessage {
+    type: 'updateTitle';
+    value: string;
+}
+export interface GenerateCodeMessage {
+    type: 'generateCode';
+    payload: { request: ApiRequest; language: string };
+}
+export interface SelectFileMessage {
+    type: 'selectFile';
+    context?: string;
+}
+export interface SaveRequestMessage {
+    type: 'saveRequest';
+    payload: ApiRequest;
+}
+export interface GetSettingsMessage {
+    type: 'getSettings';
+}
+export interface SaveSettingsMessage {
+    type: 'saveSettings';
+    payload: { settings: Settings; defaultEnvId: string };
+}
+export interface CreateEnvironmentMessage {
+    type: 'createEnvironment';
+}
+export interface DeleteEnvironmentMessage {
+    type: 'deleteEnvironment';
+    payload: string;
+}
+export interface EditEnvironmentMessage {
+    type: 'editEnvironment';
+    payload: Environment;
+}
+export interface ExportDataMessage {
+    type: 'exportData';
+}
+export interface OpenRequestMessage {
+    type: 'openRequest';
+    payload: ApiRequest | string;
+}
+export interface SaveEnvironmentMessage {
+    type: 'saveEnvironment';
+    payload: Environment;
+}
+
+export type CommonMessage = LogMessage | InfoMessage | ErrorMessage;
+
+export type ImportPanelMessage = CommonMessage | CloseMessage | GetCollectionsMessage | ImportDataMessage;
+export type RequestPanelMessage =
+    | CommonMessage
+    | ExecuteRequestMessage
+    | UpdateTitleMessage
+    | GenerateCodeMessage
+    | SelectFileMessage
+    | SaveRequestMessage
+    | GetSettingsMessage;
+export type SettingsPanelMessage =
+    | LogMessage
+    | GetSettingsMessage
+    | SaveSettingsMessage
+    | CreateEnvironmentMessage
+    | DeleteEnvironmentMessage
+    | EditEnvironmentMessage
+    | SelectFileMessage
+    | ImportDataMessage
+    | ExportDataMessage;
+export type ExamplePanelMessage = CommonMessage | OpenRequestMessage;
+export type EnvironmentPanelMessage = CommonMessage | SaveEnvironmentMessage | GetSettingsMessage;
+
+export type WebviewMessage =
+    | ImportPanelMessage
+    | RequestPanelMessage
+    | SettingsPanelMessage
+    | ExamplePanelMessage
+    | EnvironmentPanelMessage;
