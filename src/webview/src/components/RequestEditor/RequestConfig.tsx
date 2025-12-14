@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Box, Tabs, Tab, Tooltip, IconButton } from '@mui/material';
+import { Box, Tabs, Tab, Tooltip, IconButton, Paper, Typography } from '@mui/material';
 import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
 import HorizontalSplitIcon from '@mui/icons-material/HorizontalSplit';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Editor from '@monaco-editor/react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ApiRequest, ApiRequestBody, KeyValueItem } from '../../types';
 import KeyValueTable from './KeyValueTable';
 import BodyEditor from './BodyEditor';
@@ -129,28 +131,95 @@ export default function RequestConfig({ request, onChange, layout, onLayoutChang
             </Box>
             <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
                 <CustomTabPanel value={tabValue} index={0}>
-                    <Box
-                        sx={{
-                            height: '100%',
-                            border: 1,
-                            borderColor: 'divider',
-                            borderRadius: 1,
-                            overflow: 'hidden'
-                        }}
-                    >
-                        <Editor
-                            height="100%"
-                            theme={theme}
-                            language="markdown"
-                            value={request.description || ''}
-                            onChange={(value) => onChange('description', value || '')}
-                            options={{
-                                minimap: { enabled: false },
-                                lineNumbers: 'off',
-                                wordWrap: 'on',
-                                automaticLayout: true
+                    <Box sx={{ display: 'flex', height: '100%', gap: 2 }}>
+                        {/* Editor Side */}
+                        <Box
+                            sx={{
+                                flex: 1,
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                overflow: 'hidden'
                             }}
-                        />
+                        >
+                            <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                                Edit (Markdown)
+                            </Typography>
+                            <Box
+                                sx={{
+                                    flexGrow: 1,
+                                    border: 1,
+                                    borderColor: 'divider',
+                                    borderRadius: 1,
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                <Editor
+                                    height="100%"
+                                    theme={theme}
+                                    language="markdown"
+                                    value={request.description || ''}
+                                    onChange={(value) => onChange('description', value || '')}
+                                    options={{
+                                        minimap: { enabled: false },
+                                        lineNumbers: 'off',
+                                        wordWrap: 'on',
+                                        automaticLayout: true
+                                    }}
+                                />
+                            </Box>
+                        </Box>
+
+                        {/* Preview Side */}
+                        <Box
+                            sx={{
+                                flex: 1,
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                                Preview
+                            </Typography>
+                            <Paper
+                                variant="outlined"
+                                sx={{
+                                    flexGrow: 1,
+                                    p: 2,
+                                    overflow: 'auto',
+                                    bgcolor: 'background.default',
+                                    '& table': {
+                                        borderCollapse: 'collapse',
+                                        width: '100%',
+                                        mb: 2
+                                    },
+                                    '& th, & td': {
+                                        border: 1,
+                                        borderColor: 'divider',
+                                        p: 1
+                                    },
+                                    '& img': {
+                                        maxWidth: '100%'
+                                    },
+                                    '& pre': {
+                                        bgcolor: 'action.hover',
+                                        p: 1,
+                                        borderRadius: 1,
+                                        overflow: 'auto'
+                                    }
+                                }}
+                            >
+                                {request.description ? (
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{request.description}</ReactMarkdown>
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                        No description provided.
+                                    </Typography>
+                                )}
+                            </Paper>
+                        </Box>
                     </Box>
                 </CustomTabPanel>
                 <CustomTabPanel value={tabValue} index={1}>
