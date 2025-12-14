@@ -354,7 +354,7 @@ export default function FolderItem({
 
             <Collapse in={open} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding sx={{ pl: 2, borderLeft: '1px solid', borderColor: 'divider' }}>
-                    {folder.children &&
+                    {folder.children && folder.children.length > 0 ? (
                         folder.children.map((item) =>
                             item.type === 'folder' ? (
                                 <FolderItem
@@ -394,7 +394,26 @@ export default function FolderItem({
                                     onDrop={onDrop}
                                 />
                             )
-                        )}
+                        )
+                    ) : (
+                        <ListItemButton
+                            onClick={handleAddRequest}
+                            sx={{
+                                pl: 2,
+                                py: 0.5,
+                                opacity: 0.7,
+                                '&:hover': { opacity: 1, bgcolor: 'action.hover' }
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: 30 }}>
+                                <AddIcon fontSize="small" sx={{ fontSize: 16 }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Add request"
+                                primaryTypographyProps={{ variant: 'body2', fontSize: '0.8rem' }}
+                            />
+                        </ListItemButton>
+                    )}
                 </List>
             </Collapse>
 
