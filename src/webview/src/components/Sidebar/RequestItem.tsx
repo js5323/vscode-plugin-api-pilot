@@ -28,6 +28,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import { useState } from 'react';
+import { setDragImage } from '../../utils/dragDrop';
 import { METHOD_COLORS } from '../../constants';
 import { ApiRequest, ApiExample } from '../../types';
 import ExampleItem from './ExampleItem';
@@ -139,8 +140,7 @@ export default function RequestItem({
         e.dataTransfer.effectAllowed = 'move';
         // Ensure only the item is shown as drag image
         if (e.currentTarget) {
-            const target = e.currentTarget as HTMLElement;
-            e.dataTransfer.setDragImage(target, 0, 0);
+            setDragImage(e, e.currentTarget as HTMLElement);
         }
     };
 

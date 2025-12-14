@@ -2,7 +2,8 @@ import * as yaml from 'js-yaml';
 import { CollectionItem, ApiRequest, CollectionFolder } from '../../shared/types';
 
 interface OpenApiSpec {
-    openapi: string;
+    openapi?: string;
+    swagger?: string;
     info: {
         title: string;
         version: string;
@@ -30,9 +31,14 @@ interface OpenApiOperation {
 }
 
 export class Exporter {
-    static exportToSwagger(collection: CollectionFolder | CollectionItem[]): string {
+    static exportToSwagger(
+        collection: CollectionFolder | CollectionItem[],
+        format: 'yaml' | 'json' = 'yaml',
+        version: '3.0.0' | '2.0' = '3.0.0'
+    ): string {
         const openApi: OpenApiSpec = {
-            openapi: '3.0.0',
+            openapi: version === '3.0.0' ? '3.0.0' : undefined,
+            swagger: version === '2.0' ? '2.0' : undefined,
             info: {
                 title: 'Exported Collection',
                 version: '1.0.0'
@@ -43,6 +49,9 @@ export class Exporter {
         const items = Array.isArray(collection) ? collection : [collection];
         this.processItems(items, openApi);
 
+        if (format === 'json') {
+            return JSON.stringify(openApi, null, 2);
+        }
         return yaml.dump(openApi);
     }
 

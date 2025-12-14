@@ -108,13 +108,34 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     case 'exportCollection': {
                         const collection = data.payload;
                         try {
-                            const yamlContent = Exporter.exportToSwagger(collection);
+                            // Step 1: Select Swagger Version
+                            const version = await vscode.window.showQuickPick(['3.0.0', '2.0'], {
+                                placeHolder: 'Select Swagger/OpenAPI Version',
+                                title: 'Export Configuration'
+                            });
+                            if (!version) return; // User cancelled
+
+                            // Step 2: Select Format
+                            const format = await vscode.window.showQuickPick(['YAML', 'JSON'], {
+                                placeHolder: 'Select Export Format',
+                                title: 'Export Configuration'
+                            });
+                            if (!format) return; // User cancelled
+
+                            const fileExt = format.toLowerCase() === 'yaml' ? 'yaml' : 'json';
+                            const yamlContent = Exporter.exportToSwagger(
+                                collection,
+                                fileExt as 'yaml' | 'json',
+                                version as '3.0.0' | '2.0'
+                            );
+
                             const uri = await vscode.window.showSaveDialog({
                                 filters: {
-                                    YAML: ['yaml', 'yml']
+                                    [format]: [fileExt]
                                 },
-                                saveLabel: 'Export Swagger'
+                                saveLabel: `Export Swagger (${version})`
                             });
+
                             if (uri) {
                                 await vscode.workspace.fs.writeFile(
                                     uri,

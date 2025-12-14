@@ -30,6 +30,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ShareIcon from '@mui/icons-material/Share';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
+import { setDragImage } from '../../utils/dragDrop';
 import RequestItem from './RequestItem';
 import { getVsCodeApi } from '../../utils/vscode';
 import { CollectionFolder, ApiRequest, ApiExample } from '../../types';
@@ -162,11 +163,7 @@ export default function FolderItem({
         e.dataTransfer.effectAllowed = 'move';
         // Ensure only the item is shown as drag image
         if (e.currentTarget) {
-            const target = e.currentTarget as HTMLElement;
-            // We can clone it or just use it. Using it directly is standard.
-            // If the user sees "whole list", maybe the browser is grabbing a parent?
-            // Explicitly setting it helps.
-            e.dataTransfer.setDragImage(target, 0, 0);
+            setDragImage(e, e.currentTarget as HTMLElement);
         }
     };
 
