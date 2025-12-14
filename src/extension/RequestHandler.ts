@@ -1,7 +1,9 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { URLSearchParams } from 'url';
+import * as https from 'https';
+import * as fs from 'fs';
 import { Logger } from './utils/Logger';
-import { ApiRequest, KeyValueItem } from '../webview/src/types';
+import { ApiRequest, KeyValueItem, Settings } from '../shared/types';
 
 export interface ApiResponse {
     status: number;
@@ -13,7 +15,11 @@ export interface ApiResponse {
 }
 
 export class RequestHandler {
-    static async makeRequest(request: ApiRequest, variables: KeyValueItem[] = []): Promise<ApiResponse> {
+    static async makeRequest(
+        request: ApiRequest,
+        variables: KeyValueItem[] = [],
+        settings?: Settings
+    ): Promise<ApiResponse> {
         Logger.log('Starting Request Execution...');
         Logger.log(`Request Method: ${request.method}`);
         Logger.log(`Raw URL: ${request.url}`);
@@ -113,13 +119,74 @@ export class RequestHandler {
             }
         }
 
+        // Configure HTTPS Agent
+        const httpsAgent = new https.Agent({
+            rejectUnauthorized: settings?.general?.sslVerification ?? true
+        });
+
+        if (settings) {
+            // CA Certificates
+            if (settings.certificates?.ca?.length > 0) {
+                const caCerts = settings.certificates.ca
+                    .map((path) => {
+                        try {
+                            if (fs.existsSync(path)) {
+                                return fs.readFileSync(path);
+                            }
+                            Logger.error(`CA cert not found: ${path}`);
+                            return null;
+                        } catch (e) {
+                            Logger.error(`Failed to read CA cert: ${path}`, e);
+                            return null;
+                        }
+                    })
+                    .filter((cert): cert is Buffer => cert !== null);
+
+                if (caCerts.length > 0) {
+                    httpsAgent.options.ca = caCerts;
+                }
+            }
+
+            // Client Certificates
+            if (settings.certificates?.client?.length > 0) {
+                try {
+                    const urlObj = new URL(finalUrl);
+                    const hostname = urlObj.hostname;
+                    const clientCert = settings.certificates.client.find((c) => c.host === hostname);
+
+                    if (clientCert) {
+                        Logger.log(`Using client certificate for host: ${hostname}`);
+                        if (clientCert.pfx && fs.existsSync(clientCert.pfx)) {
+                            httpsAgent.options.pfx = fs.readFileSync(clientCert.pfx);
+                            if (clientCert.passphrase) {
+                                httpsAgent.options.passphrase = clientCert.passphrase;
+                            }
+                        } else {
+                            if (clientCert.crt && fs.existsSync(clientCert.crt)) {
+                                httpsAgent.options.cert = fs.readFileSync(clientCert.crt);
+                            }
+                            if (clientCert.key && fs.existsSync(clientCert.key)) {
+                                httpsAgent.options.key = fs.readFileSync(clientCert.key);
+                            }
+                            if (clientCert.passphrase) {
+                                httpsAgent.options.passphrase = clientCert.passphrase;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    Logger.error('Failed to configure client certificate', e);
+                }
+            }
+        }
+
         const config: AxiosRequestConfig = {
             method: request.method as string,
             url: finalUrl,
             headers: headers,
             params: params,
             data: data,
-            validateStatus: () => true // Don't throw on error status
+            validateStatus: () => true, // Don't throw on error status
+            httpsAgent: httpsAgent
         };
 
         try {

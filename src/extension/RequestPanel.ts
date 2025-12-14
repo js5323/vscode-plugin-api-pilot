@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { RequestHandler } from './RequestHandler';
 import { Logger } from './utils/Logger';
-import { ApiRequest, CollectionItem, Environment } from '../shared/types';
+import { ApiRequest, CollectionItem, Environment, Settings } from '../shared/types';
 
 export class RequestPanel {
     public static currentPanels = new Map<string, RequestPanel>();
@@ -71,7 +71,8 @@ export class RequestPanel {
 
                             Logger.log(`Active Environment: ${activeEnv ? activeEnv.name : 'None'}`);
 
-                            const response = await RequestHandler.makeRequest(message.payload, variables);
+                            const settings = this._context.globalState.get<Settings>('apipilot.settings');
+                            const response = await RequestHandler.makeRequest(message.payload, variables, settings);
 
                             Logger.log(`Request Execution Completed. Status: ${response.status}`);
 
