@@ -4,8 +4,8 @@ import CodeIcon from '@mui/icons-material/Code';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CloseIcon from '@mui/icons-material/Close';
 import { getVsCodeApi } from '../../utils/vscode';
-import { ApiRequest } from '../../types';
-import Editor from '@monaco-editor/react';
+import { ApiRequest, CurlSettings } from '../../types';
+import CodeEditor from '../Shared/CodeEditor';
 import { useVsCodeTheme } from '../../hooks/useVsCodeTheme';
 
 interface RightSidebarProps {
@@ -14,12 +14,17 @@ interface RightSidebarProps {
 
 const vscode = getVsCodeApi();
 
+import SettingsIcon from '@mui/icons-material/Settings';
+import CurlSettingsDialog, { DEFAULT_CURL_SETTINGS } from './CurlSettingsDialog';
+
 export default function RightSidebar({ request }: RightSidebarProps) {
     const [expanded, setExpanded] = useState(false);
     const [activeTab, setActiveTab] = useState<'code' | null>(null);
     const [language, setLanguage] = useState('curl');
     const [snippet, setSnippet] = useState('');
     const [width, setWidth] = useState(300);
+    const [curlSettings, setCurlSettings] = useState<CurlSettings>(DEFAULT_CURL_SETTINGS);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const theme = useVsCodeTheme();
     const isResizing = useRef(false);
 
@@ -27,7 +32,7 @@ export default function RightSidebar({ request }: RightSidebarProps) {
         if (expanded && activeTab === 'code') {
             generateSnippet();
         }
-    }, [request, language, expanded, activeTab]);
+    }, [request, language, expanded, activeTab, curlSettings]);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -85,7 +90,8 @@ export default function RightSidebar({ request }: RightSidebarProps) {
             type: 'generateCodeSnippet',
             payload: {
                 request,
-                language
+                language,
+                curlSettings
             }
         });
     };
@@ -169,19 +175,30 @@ export default function RightSidebar({ request }: RightSidebarProps) {
 
                     {activeTab === 'code' && (
                         <Box sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                            <FormControl size="small" fullWidth sx={{ mb: 2 }}>
-                                <InputLabel>Language</InputLabel>
-                                <Select value={language} label="Language" onChange={(e) => setLanguage(e.target.value)}>
-                                    <MenuItem value="curl">cURL</MenuItem>
-                                    <MenuItem value="javascript">JavaScript Fetch</MenuItem>
-                                    <MenuItem value="javascript-xhr">JavaScript XHR</MenuItem>
-                                    <MenuItem value="axios">Axios</MenuItem>
-                                    <MenuItem value="node">NodeJs Request</MenuItem>
-                                </Select>
-                            </FormControl>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                                <FormControl size="small" fullWidth>
+                                    <InputLabel>Language</InputLabel>
+                                    <Select
+                                        value={language}
+                                        label="Language"
+                                        onChange={(e) => setLanguage(e.target.value)}
+                                    >
+                                        <MenuItem value="curl">cURL</MenuItem>
+                                        <MenuItem value="javascript">JavaScript Fetch</MenuItem>
+                                        <MenuItem value="javascript-xhr">JavaScript XHR</MenuItem>
+                                        <MenuItem value="axios">Axios</MenuItem>
+                                        <MenuItem value="node">NodeJs Request</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                {language === 'curl' && (
+                                    <IconButton onClick={() => setSettingsOpen(true)} size="small">
+                                        <SettingsIcon />
+                                    </IconButton>
+                                )}
+                            </Box>
 
                             <Box sx={{ position: 'relative', flexGrow: 1, border: 1, borderColor: 'divider' }}>
-                                <Editor
+                                <CodeEditor
                                     height="100%"
                                     language={language === 'curl' ? 'shell' : 'javascript'}
                                     value={snippet}
@@ -212,6 +229,13 @@ export default function RightSidebar({ request }: RightSidebarProps) {
                     )}
                 </Box>
             )}
+
+            <CurlSettingsDialog
+                open={settingsOpen}
+                onClose={() => setSettingsOpen(false)}
+                settings={curlSettings}
+                onSave={setCurlSettings}
+            />
         </Box>
     );
 }

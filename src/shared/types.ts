@@ -58,6 +58,7 @@ export interface ApiRequest {
         statusText: string;
         time: number;
         size: number;
+        duration?: number;
     }[];
     _folderPath?: { id: string; name: string }[];
 }
@@ -87,6 +88,7 @@ export interface HistoryItem extends ApiRequest {
         statusText: string;
         time: number;
         size: number;
+        duration?: number;
     };
 }
 
@@ -134,7 +136,6 @@ export interface Settings {
         ca: string[];
         client: ClientCertificate[];
     };
-    theme?: 'light' | 'dark' | 'system';
 }
 
 export interface ApiResponse {
@@ -243,16 +244,6 @@ export interface GenerateCodeSnippetMessage {
     payload: { request: ApiRequest; language: string };
 }
 
-export type RequestPanelMessage =
-    | CommonMessage
-    | ExecuteRequestMessage
-    | UpdateTitleMessage
-    | GenerateCodeMessage
-    | SelectFileMessage
-    | SaveRequestMessage
-    | GetSettingsMessage
-    | ReadClipboardMessage
-    | GenerateCodeSnippetMessage;
 export type SettingsPanelMessage =
     | LogMessage
     | GetSettingsMessage
@@ -263,8 +254,6 @@ export type SettingsPanelMessage =
     | SelectFileMessage
     | ImportDataMessage
     | ExportDataMessage;
-export type ExamplePanelMessage = CommonMessage | OpenRequestMessage;
-export type EnvironmentPanelMessage = CommonMessage | SaveEnvironmentMessage | GetSettingsMessage;
 
 export type WebviewMessage =
     | ImportPanelMessage
@@ -272,3 +261,46 @@ export type WebviewMessage =
     | SettingsPanelMessage
     | ExamplePanelMessage
     | EnvironmentPanelMessage;
+
+export interface RequestPanelMessage {
+    type: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    payload?: any;
+    value?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    context?: any;
+}
+
+export interface EnvironmentPanelMessage {
+    type: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    payload?: any;
+    value?: string;
+}
+
+export interface ExamplePanelMessage {
+    type: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    payload?: any;
+    value?: string;
+}
+
+export interface CurlSettings {
+    multiline: boolean;
+    longForm: boolean;
+    lineContinuation: '\\' | '^' | '`';
+    quoteType: 'single' | 'double';
+    timeout: number;
+    followRedirects: boolean;
+    silent: boolean;
+}
+
+export const DEFAULT_CURL_SETTINGS: CurlSettings = {
+    multiline: true,
+    longForm: true,
+    lineContinuation: '\\',
+    quoteType: 'single',
+    timeout: 0,
+    followRedirects: true,
+    silent: false
+};

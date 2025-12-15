@@ -23,6 +23,8 @@ import { CollectionFolder, ApiRequest, CollectionItem } from '../../types';
 
 const vscode = getVsCodeApi();
 
+import { DEFAULT_REQUEST_HEADERS } from '../../constants';
+
 export default function CollectionsTab() {
     const [searchTerm, setSearchTerm] = useState('');
     const [collections, setCollections] = useState<CollectionItem[]>([]);
@@ -166,7 +168,10 @@ export default function CollectionsTab() {
                         method: 'GET',
                         url: '',
                         type: 'request',
-                        parentId: folderId
+                        parentId: folderId,
+                        headers: DEFAULT_REQUEST_HEADERS.map((h) => ({ ...h, id: Math.random().toString() })),
+                        queryParams: [],
+                        body: { type: 'none' }
                     };
                     newRequestToOpen = newRequest;
                     return { ...item, children: [newRequest, ...item.children] } as CollectionFolder;

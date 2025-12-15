@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import HistoryIcon from '@mui/icons-material/History';
-import Editor from '@monaco-editor/react';
+import CodeEditor from '../Shared/CodeEditor';
 import { useVsCodeTheme } from '../../hooks/useVsCodeTheme';
 import { ApiResponse } from '../../types';
 
@@ -144,7 +144,7 @@ export default function ResponseViewer({ response, loading, history = [], onSele
                 </Box>
             ) : response ? (
                 <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-                    <Editor
+                    <CodeEditor
                         height="100%"
                         theme={theme}
                         language="json"

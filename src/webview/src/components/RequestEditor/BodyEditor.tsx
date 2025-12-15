@@ -1,5 +1,5 @@
-import React from 'react';
-import Editor from '@monaco-editor/react';
+import React, { useRef } from 'react';
+import CodeEditor, { CodeEditorRef } from '../Shared/CodeEditor';
 import {
     Box,
     RadioGroup,
@@ -32,6 +32,7 @@ interface BodyEditorProps {
 
 export default function BodyEditor({ body, onChange }: BodyEditorProps) {
     const theme = useVsCodeTheme();
+    const editorRef = useRef<CodeEditorRef>(null);
 
     const handleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         onChange({ ...body, type: event.target.value as ApiRequestBody['type'] });
@@ -45,8 +46,8 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
         onChange({ ...body, urlencoded: items });
     };
 
-    const handleRawChange = (value: string) => {
-        onChange({ ...body, raw: value });
+    const handleRawChange = (value: string | undefined) => {
+        onChange({ ...body, raw: value || '' });
     };
 
     const handleSelectFile = (rowId: string) => {
@@ -79,41 +80,12 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
         }
     };
 
-    const handlePaste = async () => {
-        try {
-            const text = await navigator.clipboard.readText();
-            if (text) {
-                onChange({ ...body, raw: text });
-            }
-        } catch (e) {
-            console.error('Failed to read clipboard', e);
-            // Fallback: ask extension to read clipboard if webview doesn't have permission
-            if (vscode) {
-                vscode.postMessage({ type: 'readClipboard' });
-            }
-        }
+    const handlePaste = () => {
+        editorRef.current?.paste();
     };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-            handlePaste();
-        }
-    };
-
-    // Listen for clipboard data from extension
-    React.useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            const message = event.data;
-            if (message.type === 'clipboardData') {
-                onChange({ ...body, raw: message.payload });
-            }
-        };
-        window.addEventListener('message', handleMessage);
-        return () => window.removeEventListener('message', handleMessage);
-    }, [body, onChange]);
 
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }} onKeyDown={handleKeyDown}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box
                 sx={{
                     borderBottom: 1,
@@ -239,7 +211,8 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
 
                 {body.type === 'raw' && (
                     <Box sx={{ flexGrow: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-                        <Editor
+                        <CodeEditor
+                            ref={editorRef}
                             height="100%"
                             theme={theme}
                             language={
@@ -248,7 +221,7 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                                     : body.rawType?.toLowerCase() || 'json'
                             }
                             value={body.raw || ''}
-                            onChange={(value) => handleRawChange(value || '')}
+                            onChange={handleRawChange}
                             options={{
                                 minimap: { enabled: false },
                                 lineNumbers: 'on',

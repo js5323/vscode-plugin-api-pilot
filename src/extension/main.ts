@@ -41,6 +41,12 @@ export function activate(context: vscode.ExtensionContext) {
             sidebarProvider.refreshHistory();
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('apipilot.showOutput', () => {
+            Logger.show();
+        })
+    );
 }
 
 export function deactivate() {}

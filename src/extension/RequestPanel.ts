@@ -93,6 +93,7 @@ export class RequestPanel extends BasePanel<RequestPanelMessage> {
     }
 
     protected async _onMessage(message: RequestPanelMessage) {
+        Logger.log(`RequestPanel Received Message: ${message.type}`);
         switch (message.type) {
             case 'readClipboard': {
                 try {
@@ -108,8 +109,8 @@ export class RequestPanel extends BasePanel<RequestPanelMessage> {
             }
             case 'generateCodeSnippet': {
                 try {
-                    const { request, language } = message.payload;
-                    const code = CodeGenerator.generate(request, language);
+                    const { request, language, curlSettings } = message.payload;
+                    const code = CodeGenerator.generate(request, language, curlSettings);
 
                     // If language is curl, copy to clipboard automatically as per user preference often
                     // Or just send back to UI to display in a modal/panel
@@ -193,7 +194,9 @@ export class RequestPanel extends BasePanel<RequestPanelMessage> {
                 break;
             }
             case 'updateTitle': {
-                this._panel.title = message.value;
+                if (message.value) {
+                    this._panel.title = message.value;
+                }
                 break;
             }
             case 'generateCode': {

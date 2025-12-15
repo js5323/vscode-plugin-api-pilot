@@ -3,7 +3,7 @@ import { URLSearchParams } from 'url';
 import * as https from 'https';
 import * as fs from 'fs';
 import { Logger } from './utils/Logger';
-import { ApiRequest, KeyValueItem, Settings } from '../shared/types';
+import { ApiRequest, KeyValueItem, Settings, ClientCertificate } from '../shared/types';
 
 export interface ApiResponse {
     status: number;
@@ -77,7 +77,7 @@ export class RequestHandler {
         }
         // Add default headers from settings if not present
         if (settings?.general?.defaultHeaders) {
-            settings.general.defaultHeaders.forEach((h) => {
+            settings.general.defaultHeaders.forEach((h: KeyValueItem) => {
                 const key = substitute(h.key);
                 // Only add if not already present (case-insensitive check might be better but simple check for now)
                 if (key && !headers[key] && !headers[key.toLowerCase()]) {
@@ -136,9 +136,9 @@ export class RequestHandler {
 
         if (settings) {
             // CA Certificates
-            if (settings.certificates?.ca?.length > 0) {
+            if (settings.certificates?.ca && settings.certificates.ca.length > 0) {
                 const caCerts = settings.certificates.ca
-                    .map((path) => {
+                    .map((path: string) => {
                         try {
                             if (fs.existsSync(path)) {
                                 return fs.readFileSync(path);
@@ -158,12 +158,12 @@ export class RequestHandler {
             }
 
             // Client Certificates
-            if (settings.certificates?.client?.length > 0) {
+            if (settings.certificates?.client && settings.certificates.client.length > 0) {
                 try {
                     const urlObj = new URL(finalUrl);
                     const hostname = urlObj.hostname;
                     // Find client cert using regex or exact match
-                    const clientCert = settings.certificates.client.find((c) => {
+                    const clientCert = settings.certificates.client.find((c: ClientCertificate) => {
                         // 1. Try exact match
                         if (c.host === hostname) return true;
 
@@ -236,7 +236,7 @@ export class RequestHandler {
 
             // Fallback to Node HTTPS if client certificate is involved and axios failed
             // (User report: axios cannot read certificate properly)
-            if (settings?.certificates?.client?.length && settings.certificates.client.length > 0) {
+            if (settings?.certificates?.client && settings.certificates.client.length > 0) {
                 try {
                     return await RequestHandler.makeRequestNode(finalUrl, request.method, headers, data, httpsAgent);
                 } catch (nodeError) {

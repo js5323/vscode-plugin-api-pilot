@@ -7,6 +7,7 @@ import RequestConfig from '../components/RequestEditor/RequestConfig';
 import ResponseViewer from '../components/RequestEditor/ResponseViewer';
 import RequestHeader from '../components/RequestEditor/RequestHeader';
 import RightSidebar from '../components/RequestEditor/RightSidebar';
+import { DEFAULT_REQUEST_HEADERS } from '../constants';
 
 const vscode = getVsCodeApi();
 
@@ -18,7 +19,7 @@ const migrateRequest = (data: unknown): ApiRequest => {
             method: 'GET',
             url: '',
             type: 'request',
-            headers: [],
+            headers: DEFAULT_REQUEST_HEADERS.map((h) => ({ ...h, id: Math.random().toString() })),
             queryParams: [],
             body: { type: 'none' }
         };
@@ -82,7 +83,7 @@ export default function RequestEditor() {
 
     const getInitialHistory = () => {
         if (initialData && 'responseHistory' in initialData && Array.isArray(initialData.responseHistory)) {
-            return initialData.responseHistory;
+            return initialData.responseHistory as ApiResponse[];
         }
         return [];
     };

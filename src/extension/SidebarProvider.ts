@@ -43,6 +43,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.onDidReceiveMessage(
             async (data) => {
+                Logger.log(`Sidebar Received Message: ${data.type}`);
                 switch (data.type) {
                     case 'executeRequest': {
                         try {

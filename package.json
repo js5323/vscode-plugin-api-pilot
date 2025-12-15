@@ -25,6 +25,10 @@
             {
                 "command": "apipilot.createRequest",
                 "title": "ApiPilot: New Request"
+            },
+            {
+                "command": "apipilot.showOutput",
+                "title": "ApiPilot: Show Output"
             }
         ],
         "viewsContainers": {

@@ -79,7 +79,7 @@ export default function SettingsPage() {
                         ...prev,
                         certificates: {
                             ...prev.certificates,
-                            ca: [...prev.certificates.ca, payload]
+                            ca: [...(prev.certificates?.ca || []), payload]
                         }
                     }));
                 }
