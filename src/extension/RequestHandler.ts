@@ -75,6 +75,16 @@ export class RequestHandler {
                 }
             });
         }
+        // Add default headers from settings if not present
+        if (settings?.general?.defaultHeaders) {
+            settings.general.defaultHeaders.forEach((h) => {
+                const key = substitute(h.key);
+                // Only add if not already present (case-insensitive check might be better but simple check for now)
+                if (key && !headers[key] && !headers[key.toLowerCase()]) {
+                    headers[key] = substitute(h.value);
+                }
+            });
+        }
         Logger.log('Headers:', headers);
 
         // 3. Process Body
@@ -152,10 +162,27 @@ export class RequestHandler {
                 try {
                     const urlObj = new URL(finalUrl);
                     const hostname = urlObj.hostname;
-                    const clientCert = settings.certificates.client.find((c) => c.host === hostname);
+                    // Find client cert using regex or exact match
+                    const clientCert = settings.certificates.client.find((c) => {
+                        // 1. Try exact match
+                        if (c.host === hostname) return true;
+
+                        // 2. Try regex match (if the config looks like a regex or we assume it is)
+                        // User requested regex support for host matching.
+                        try {
+                            // Escape dot if it looks like a simple domain string to avoid accidental "any char" match
+                            // BUT user asked for regex, so let's treat it as regex if it contains regex chars?
+                            // Or just always try to treat it as regex.
+                            const regex = new RegExp(c.host);
+                            return regex.test(hostname);
+                        } catch {
+                            // Invalid regex, ignore
+                            return false;
+                        }
+                    });
 
                     if (clientCert) {
-                        Logger.log(`Using client certificate for host: ${hostname}`);
+                        Logger.log(`Using client certificate for host: ${hostname} (matched: ${clientCert.host})`);
                         if (clientCert.pfx && fs.existsSync(clientCert.pfx)) {
                             httpsAgent.options.pfx = fs.readFileSync(clientCert.pfx);
                             if (clientCert.passphrase) {
@@ -205,6 +232,19 @@ export class RequestHandler {
                 size
             };
         } catch (error: unknown) {
+            Logger.error('Axios request failed, checking for fallback...', error);
+
+            // Fallback to Node HTTPS if client certificate is involved and axios failed
+            // (User report: axios cannot read certificate properly)
+            if (settings?.certificates?.client?.length && settings.certificates.client.length > 0) {
+                try {
+                    return await RequestHandler.makeRequestNode(finalUrl, request.method, headers, data, httpsAgent);
+                } catch (nodeError) {
+                    Logger.error('Node HTTPS fallback also failed', nodeError);
+                    // continue to return original error
+                }
+            }
+
             const duration = Date.now() - startTime;
             const err = error as { message: string; response?: AxiosResponse };
             Logger.error(`Request Failed: ${err.message}`, error);
@@ -218,5 +258,69 @@ export class RequestHandler {
                 size: 0
             };
         }
+    }
+
+    private static async makeRequestNode(
+        url: string,
+        method: string,
+        headers: Record<string, string>,
+        data: unknown,
+        agent: https.Agent
+    ): Promise<ApiResponse> {
+        Logger.log('Attempting Node.js HTTPS fallback...');
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            const urlObj = new URL(url);
+
+            const options: https.RequestOptions = {
+                method: method,
+                headers: headers,
+                agent: agent,
+                hostname: urlObj.hostname,
+                port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+                path: urlObj.pathname + urlObj.search
+            };
+
+            const req = https.request(options, (res) => {
+                const responseData: Uint8Array[] = [];
+                res.on('data', (chunk) => {
+                    responseData.push(chunk);
+                });
+
+                res.on('end', () => {
+                    const duration = Date.now() - startTime;
+                    const buffer = Buffer.concat(responseData);
+                    const responseString = buffer.toString('utf-8');
+                    let parsedData: unknown = responseString;
+                    try {
+                        parsedData = JSON.parse(responseString);
+                    } catch {
+                        // ignore, keep as string
+                    }
+
+                    resolve({
+                        status: res.statusCode || 0,
+                        statusText: res.statusMessage || '',
+                        data: parsedData,
+                        headers: res.headers as Record<string, string | string[] | undefined>,
+                        duration,
+                        size: buffer.length
+                    });
+                });
+            });
+
+            req.on('error', (e) => {
+                reject(e);
+            });
+
+            if (data) {
+                if (typeof data === 'object') {
+                    req.write(JSON.stringify(data));
+                } else {
+                    req.write(String(data));
+                }
+            }
+            req.end();
+        });
     }
 }

@@ -33,7 +33,7 @@ export default function RightSidebar({ request }: RightSidebarProps) {
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message.type === 'codeSnippetGenerated') {
-                setSnippet(message.payload);
+                setSnippet(message.payload.code);
             }
         };
 

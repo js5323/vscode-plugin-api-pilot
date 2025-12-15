@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { BasePanel } from './BasePanel';
 import { RequestHandler } from './RequestHandler';
+import { CodeGenerator } from './utils/CodeGenerator';
 import { Logger } from './utils/Logger';
 import { ApiRequest, CollectionItem, Environment, Settings, RequestPanelMessage } from '../shared/types';
 
@@ -93,7 +94,48 @@ export class RequestPanel extends BasePanel<RequestPanelMessage> {
 
     protected async _onMessage(message: RequestPanelMessage) {
         switch (message.type) {
+            case 'readClipboard': {
+                try {
+                    const text = await vscode.env.clipboard.readText();
+                    this._panel.webview.postMessage({
+                        type: 'clipboardData',
+                        payload: text
+                    });
+                } catch (e) {
+                    Logger.error('Failed to read clipboard', e);
+                }
+                break;
+            }
+            case 'generateCodeSnippet': {
+                try {
+                    const { request, language } = message.payload;
+                    const code = CodeGenerator.generate(request, language);
+
+                    // If language is curl, copy to clipboard automatically as per user preference often
+                    // Or just send back to UI to display in a modal/panel
+                    // The previous implementation in SidebarProvider was copying to clipboard.
+
+                    // For now, let's copy to clipboard and notify, as that seems to be the intent
+                    await vscode.env.clipboard.writeText(code);
+                    vscode.window.showInformationMessage(`${language} snippet copied to clipboard!`);
+
+                    // Also send back if the UI needs to display it
+                    this._panel.webview.postMessage({
+                        type: 'codeSnippetGenerated',
+                        payload: { language, code }
+                    });
+                } catch (e) {
+                    Logger.error(`Failed to generate code: ${e}`);
+                    vscode.window.showErrorMessage('Failed to generate code snippet');
+                }
+                break;
+            }
             case 'executeRequest': {
+                const payload = message.payload as unknown as { request: ApiRequest; environmentId: string };
+                const { request } = payload;
+                // Get Settings & Environment
+                const settings = this._context.globalState.get<Settings>('apipilot.settings');
+
                 try {
                     Logger.log('Execute Request Command Received');
 
@@ -103,8 +145,7 @@ export class RequestPanel extends BasePanel<RequestPanelMessage> {
 
                     Logger.log(`Active Environment: ${activeEnv ? activeEnv.name : 'None'}`);
 
-                    const settings = this._context.globalState.get<Settings>('apipilot.settings');
-                    const response = await RequestHandler.makeRequest(message.payload, variables, settings);
+                    const response = await RequestHandler.makeRequest(request, variables, settings);
 
                     Logger.log(`Request Execution Completed. Status: ${response.status}`);
 

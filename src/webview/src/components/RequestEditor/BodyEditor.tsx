@@ -14,6 +14,7 @@ import {
     IconButton,
     Divider
 } from '@mui/material';
+import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -78,8 +79,41 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
         }
     };
 
+    const handlePaste = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+                onChange({ ...body, raw: text });
+            }
+        } catch (e) {
+            console.error('Failed to read clipboard', e);
+            // Fallback: ask extension to read clipboard if webview doesn't have permission
+            if (vscode) {
+                vscode.postMessage({ type: 'readClipboard' });
+            }
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+            handlePaste();
+        }
+    };
+
+    // Listen for clipboard data from extension
+    React.useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.type === 'clipboardData') {
+                onChange({ ...body, raw: message.payload });
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [body, onChange]);
+
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }} onKeyDown={handleKeyDown}>
             <Box
                 sx={{
                     borderBottom: 1,
@@ -165,6 +199,14 @@ export default function BodyEditor({ body, onChange }: BodyEditorProps) {
                                 sx={{ textTransform: 'none', fontWeight: 'bold' }}
                             >
                                 Beautify
+                            </Button>
+                            <Button
+                                size="small"
+                                onClick={handlePaste}
+                                startIcon={<ContentPasteIcon />}
+                                sx={{ textTransform: 'none', fontWeight: 'bold' }}
+                            >
+                                Paste
                             </Button>
                         </Box>
                     </Stack>

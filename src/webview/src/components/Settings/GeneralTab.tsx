@@ -1,4 +1,14 @@
-import { TextField, FormControlLabel, Switch, Divider, Typography, Stack, Button, IconButton } from '@mui/material';
+import {
+    TextField,
+    FormControlLabel,
+    Switch,
+    Divider,
+    Typography,
+    Stack,
+    Button,
+    IconButton,
+    Autocomplete
+} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { Settings, KeyValueItem } from '../../types';
@@ -7,6 +17,42 @@ interface GeneralTabProps {
     settings: Settings;
     setSettings: (s: Settings) => void;
 }
+
+const COMMON_HEADERS = [
+    'Accept',
+    'Accept-Charset',
+    'Accept-Encoding',
+    'Accept-Language',
+    'Accept-Datetime',
+    'Authorization',
+    'Cache-Control',
+    'Connection',
+    'Cookie',
+    'Content-Length',
+    'Content-MD5',
+    'Content-Type',
+    'Date',
+    'Expect',
+    'Forwarded',
+    'From',
+    'Host',
+    'If-Match',
+    'If-Modified-Since',
+    'If-None-Match',
+    'If-Range',
+    'If-Unmodified-Since',
+    'Max-Forwards',
+    'Origin',
+    'Pragma',
+    'Proxy-Authorization',
+    'Range',
+    'Referer',
+    'TE',
+    'User-Agent',
+    'Upgrade',
+    'Via',
+    'Warning'
+];
 
 export const GeneralTab = ({ settings, setSettings }: GeneralTabProps) => (
     <Stack spacing={3}>
@@ -68,16 +114,22 @@ export const GeneralTab = ({ settings, setSettings }: GeneralTabProps) => (
         <Typography variant="subtitle2">Default Request Headers</Typography>
         {settings.general.defaultHeaders.map((header: KeyValueItem, index: number) => (
             <Stack direction="row" spacing={1} key={index}>
-                <TextField
-                    label="Key"
-                    size="small"
-                    fullWidth
+                <Autocomplete
+                    freeSolo
+                    options={COMMON_HEADERS}
                     value={header.key}
-                    onChange={(e) => {
+                    onChange={(_, newValue) => {
                         const newHeaders = [...settings.general.defaultHeaders];
-                        newHeaders[index].key = e.target.value;
+                        newHeaders[index].key = newValue || '';
                         setSettings({ ...settings, general: { ...settings.general, defaultHeaders: newHeaders } });
                     }}
+                    onInputChange={(_, newInputValue) => {
+                        const newHeaders = [...settings.general.defaultHeaders];
+                        newHeaders[index].key = newInputValue;
+                        setSettings({ ...settings, general: { ...settings.general, defaultHeaders: newHeaders } });
+                    }}
+                    renderInput={(params) => <TextField {...params} label="Key" size="small" fullWidth />}
+                    sx={{ width: '100%' }}
                 />
                 <TextField
                     label="Value"

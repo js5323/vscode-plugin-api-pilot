@@ -12,7 +12,8 @@ import {
     DialogActions,
     ListItemButton,
     ListItemText,
-    CircularProgress
+    CircularProgress,
+    TextField
 } from '@mui/material';
 import FolderItem from './FolderItem';
 import RequestItem from './RequestItem';
@@ -33,6 +34,24 @@ export default function CollectionsTab() {
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
     const [itemToMove, setItemToMove] = useState<string | null>(null);
     const [targetFolderId, setTargetFolderId] = useState<string>('');
+    const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
+    const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
+
+    const getFolderPath = (items: CollectionItem[], targetId: string): { id: string; name: string }[] => {
+        for (const item of items) {
+            if (item.id === targetId) {
+                return [{ id: item.id, name: item.name }];
+            }
+            if (item.type === 'folder') {
+                const path = getFolderPath((item as CollectionFolder).children, targetId);
+                if (path.length > 0) {
+                    return [{ id: item.id, name: item.name }, ...path];
+                }
+            }
+        }
+        return [];
+    };
 
     useEffect(() => {
         if (searchTerm.trim() === '') {
@@ -95,13 +114,45 @@ export default function CollectionsTab() {
     };
 
     const handleCreateCollection = () => {
-        const newCollection: CollectionFolder = {
-            id: Date.now().toString(),
-            name: 'New Collection',
-            type: 'folder',
-            children: []
-        };
-        saveCollections([...collections, newCollection]);
+        setNewFolderName('');
+        setCreateFolderParentId(null);
+        setCreateFolderDialogOpen(true);
+    };
+
+    const confirmCreateFolder = () => {
+        if (!newFolderName.trim()) return;
+
+        if (createFolderParentId === null) {
+            // Create root collection
+            const newCollection: CollectionFolder = {
+                id: Date.now().toString(),
+                name: newFolderName,
+                type: 'folder',
+                children: []
+            };
+            saveCollections([...collections, newCollection]);
+        } else {
+            // Add folder to folder
+            const addFolder = (items: CollectionItem[]): CollectionItem[] => {
+                return items.map((item) => {
+                    if (item.id === createFolderParentId && item.type === 'folder') {
+                        const newFolder: CollectionFolder = {
+                            id: Date.now().toString(),
+                            name: newFolderName,
+                            type: 'folder',
+                            children: []
+                        };
+                        return { ...item, children: [newFolder, ...item.children] } as CollectionFolder;
+                    }
+                    if (item.type === 'folder') {
+                        return { ...item, children: addFolder(item.children) } as CollectionFolder;
+                    }
+                    return item;
+                });
+            };
+            saveCollections(addFolder(collections));
+        }
+        setCreateFolderDialogOpen(false);
     };
 
     const handleAddRequestToFolder = (folderId: string) => {
@@ -129,29 +180,19 @@ export default function CollectionsTab() {
         saveCollections(addRequest(collections));
 
         if (newRequestToOpen) {
-            vscode.postMessage({ type: 'openRequest', payload: newRequestToOpen });
+            const folderPath = getFolderPath(collections, folderId);
+            const requestWithMeta = {
+                ...(newRequestToOpen as ApiRequest),
+                _folderPath: folderPath
+            };
+            vscode.postMessage({ type: 'openRequest', payload: requestWithMeta });
         }
     };
 
     const handleAddFolderToFolder = (folderId: string) => {
-        const addFolder = (items: CollectionItem[]): CollectionItem[] => {
-            return items.map((item) => {
-                if (item.id === folderId && item.type === 'folder') {
-                    const newFolder: CollectionFolder = {
-                        id: Date.now().toString(),
-                        name: 'New Folder',
-                        type: 'folder',
-                        children: []
-                    };
-                    return { ...item, children: [newFolder, ...item.children] } as CollectionFolder;
-                }
-                if (item.type === 'folder') {
-                    return { ...item, children: addFolder(item.children) } as CollectionFolder;
-                }
-                return item;
-            });
-        };
-        saveCollections(addFolder(collections));
+        setNewFolderName('');
+        setCreateFolderParentId(folderId);
+        setCreateFolderDialogOpen(true);
     };
 
     const handleRenameItem = (id: string, newName: string) => {
@@ -449,7 +490,13 @@ export default function CollectionsTab() {
                                     onRun={handleRunItem}
                                     onShare={handleShareItem}
                                     onAddExample={handleAddExampleItem}
-                                    onOpenRequest={(req) => vscode.postMessage({ type: 'openRequest', payload: req })}
+                                    onOpenRequest={(req) => {
+                                        const folderPath = getFolderPath(collections, req.parentId || '');
+                                        vscode.postMessage({
+                                            type: 'openRequest',
+                                            payload: { ...req, _folderPath: folderPath }
+                                        });
+                                    }}
                                     onOpenExample={(ex, req) =>
                                         vscode.postMessage({
                                             type: 'openExample',
@@ -466,7 +513,13 @@ export default function CollectionsTab() {
                                 <RequestItem
                                     key={item.id}
                                     request={item}
-                                    onClick={() => vscode.postMessage({ type: 'openRequest', payload: item })}
+                                    onClick={() => {
+                                        // Root request has no parent folder path
+                                        vscode.postMessage({
+                                            type: 'openRequest',
+                                            payload: { ...item, _folderPath: [] }
+                                        });
+                                    }}
                                     onDelete={handleDeleteClick}
                                     onRename={handleRenameItem}
                                     onDuplicate={handleDuplicateItem}
@@ -488,6 +541,31 @@ export default function CollectionsTab() {
                     </List>
                 )}
             </Box>
+
+            <Dialog open={createFolderDialogOpen} onClose={() => setCreateFolderDialogOpen(false)}>
+                <DialogTitle>{createFolderParentId ? 'New Folder' : 'New Collection'}</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Please enter a name for the new {createFolderParentId ? 'folder' : 'collection'}.
+                    </DialogContentText>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Name"
+                        fullWidth
+                        variant="standard"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') confirmCreateFolder();
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setCreateFolderDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={confirmCreateFolder}>Create</Button>
+                </DialogActions>
+            </Dialog>
 
             <Dialog
                 open={deleteDialogOpen}

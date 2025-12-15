@@ -24,6 +24,7 @@ export default function SidebarSearch({
                 <IconButton
                     size="small"
                     onClick={onAction}
+                    title="New Collection"
                     sx={{
                         p: 0.5,
                         color: 'text.secondary',

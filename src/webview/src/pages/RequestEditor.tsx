@@ -73,7 +73,9 @@ export default function RequestEditor() {
     const [request, setRequest] = useState<ApiRequest>(migrateRequest(initialData));
     const [response, setResponse] = useState<ApiResponse | null>(null);
     const [loading, setLoading] = useState(false);
-    const [layout, setLayout] = useState<'vertical' | 'horizontal'>('vertical');
+    const [layout, setLayout] = useState<'vertical' | 'horizontal'>(() => {
+        return (localStorage.getItem('apipilot_layout') as 'vertical' | 'horizontal') || 'vertical';
+    });
     const [splitPos, setSplitPos] = useState(50); // percentage
     const containerRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
@@ -127,7 +129,11 @@ export default function RequestEditor() {
     };
 
     const toggleLayout = () => {
-        setLayout((prev) => (prev === 'vertical' ? 'horizontal' : 'vertical'));
+        setLayout((prev) => {
+            const newLayout = prev === 'vertical' ? 'horizontal' : 'vertical';
+            localStorage.setItem('apipilot_layout', newLayout);
+            return newLayout;
+        });
     };
 
     useEffect(() => {
@@ -179,6 +185,7 @@ export default function RequestEditor() {
     }, []);
 
     const handleSend = () => {
+        handleSave(); // Auto-save before sending
         setResponse(null);
         setLoading(true);
         vscode.postMessage({ type: 'executeRequest', payload: request });

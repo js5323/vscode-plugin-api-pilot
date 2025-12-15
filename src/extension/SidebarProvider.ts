@@ -548,9 +548,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         let styleResetUri = '';
 
         if (isDev) {
-            scriptUri = 'http://127.0.0.1:5173/src/main.tsx';
+            scriptUri = 'http://localhost:5173/src/main.tsx';
             // In dev mode, styles are usually injected by Vite, but we might need reset
-            styleResetUri = 'http://127.0.0.1:5173/src/index.css';
+            styleResetUri = 'http://localhost:5173/src/index.css';
         } else {
             scriptUri = webview
                 .asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'dist', 'assets', 'index.js'))
@@ -566,7 +566,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const nonce = getNonce();
 
         const csp = isDev
-            ? `default-src 'none'; connect-src ${webview.cspSource} https: http://127.0.0.1:5173 ws://127.0.0.1:5173 data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' http://127.0.0.1:5173; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' http://127.0.0.1:5173; font-src ${webview.cspSource} https: data:;`
+            ? `default-src 'none'; connect-src ${webview.cspSource} https: http://localhost:5173 ws://localhost:5173 data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' http://localhost:5173; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' http://localhost:5173; font-src ${webview.cspSource} https: data:;`
             : `default-src 'none'; connect-src ${webview.cspSource} https: data:; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval'; font-src ${webview.cspSource} https: data:;`;
 
         return `<!DOCTYPE html>
@@ -612,13 +612,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     isDev
                         ? `
                     <script type="module" nonce="${nonce}">
-                        import RefreshRuntime from "http://127.0.0.1:5173/@react-refresh"
+                        import RefreshRuntime from "http://localhost:5173/@react-refresh"
                         RefreshRuntime.injectIntoGlobalHook(window)
                         window.$RefreshReg$ = () => {}
                         window.$RefreshSig$ = () => (type) => type
                         window.__vite_plugin_react_preamble_installed__ = true
                     </script>
-                    <script type="module" nonce="${nonce}" src="http://127.0.0.1:5173/@vite/client"></script>
+                    <script type="module" nonce="${nonce}" src="http://localhost:5173/@vite/client"></script>
                     <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
                 `
                         : `

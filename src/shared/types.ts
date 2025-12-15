@@ -231,9 +231,18 @@ export interface SaveEnvironmentMessage {
     payload: Environment;
 }
 
+export interface ReadClipboardMessage {
+    type: 'readClipboard';
+}
+
 export type CommonMessage = LogMessage | InfoMessage | ErrorMessage;
 
 export type ImportPanelMessage = CommonMessage | CloseMessage | GetCollectionsMessage | ImportDataMessage;
+export interface GenerateCodeSnippetMessage {
+    type: 'generateCodeSnippet';
+    payload: { request: ApiRequest; language: string };
+}
+
 export type RequestPanelMessage =
     | CommonMessage
     | ExecuteRequestMessage
@@ -241,7 +250,9 @@ export type RequestPanelMessage =
     | GenerateCodeMessage
     | SelectFileMessage
     | SaveRequestMessage
-    | GetSettingsMessage;
+    | GetSettingsMessage
+    | ReadClipboardMessage
+    | GenerateCodeSnippetMessage;
 export type SettingsPanelMessage =
     | LogMessage
     | GetSettingsMessage
